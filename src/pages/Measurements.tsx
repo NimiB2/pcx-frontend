@@ -16,7 +16,6 @@ import {
     MenuItem,
     FormControl,
     InputLabel,
-    Grid,
 } from '@mui/material';
 import { Add, FilterList } from '@mui/icons-material';
 import { Link } from 'react-router-dom';
@@ -60,8 +59,8 @@ const Measurements: React.FC = () => {
             </Box>
 
             <Paper sx={{ p: 2, mb: 3 }}>
-                <Grid container spacing={2} alignItems="center">
-                    <Grid item xs={12} md={4}>
+                <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
+                    <Box sx={{ flex: '1 1 300px', minWidth: '200px' }}>
                         <FormControl fullWidth size="small">
                             <InputLabel>Status Filter</InputLabel>
                             <Select
@@ -74,21 +73,21 @@ const Measurements: React.FC = () => {
                                 <MenuItem value="pending">Pending</MenuItem>
                             </Select>
                         </FormControl>
-                    </Grid>
-                    <Grid item xs={12} md={4}>
+                    </Box>
+                    <Box sx={{ flex: '1 1 300px', minWidth: '200px' }}>
                         <TextField
                             fullWidth
                             size="small"
                             label="Search"
                             placeholder="Search by batch, material..."
                         />
-                    </Grid>
-                    <Grid item xs={12} md={4}>
+                    </Box>
+                    <Box sx={{ flex: '1 1 200px', minWidth: '150px' }}>
                         <Typography variant="body2" color="text.secondary">
                             Showing {filteredMeasurements.length} of {mockMeasurements.length} measurements
                         </Typography>
-                    </Grid>
-                </Grid>
+                    </Box>
+                </Box>
             </Paper>
 
             <TableContainer component={Paper}>

@@ -2,7 +2,6 @@ import React from 'react';
 import {
     Box,
     Typography,
-    Grid,
     Card,
     CardContent,
     Chip,
@@ -31,54 +30,53 @@ const Batches: React.FC = () => {
                 Track production batches and material lineage
             </Typography>
 
-            <Grid container spacing={3}>
+
+            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 3 }}>
                 {mockBatches.map((batch) => (
-                    <Grid item xs={12} md={6} lg={4} key={batch.id}>
-                        <Card>
-                            <CardContent>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                                    <Typography variant="h6" fontWeight="bold">
-                                        {batch.id}
-                                    </Typography>
-                                    <Chip
-                                        label={batch.status}
-                                        size="small"
-                                        color={getStatusColor(batch.status)}
-                                    />
-                                </Box>
-                                <Typography variant="body2" color="text.secondary" gutterBottom>
-                                    {batch.productName}
+                    <Card key={batch.id}>
+                        <CardContent>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                                <Typography variant="h6" fontWeight="bold">
+                                    {batch.id}
                                 </Typography>
-                                <Typography variant="body2" sx={{ mt: 2 }}>
-                                    Recycled Content: <strong>{batch.recycledPercentage}%</strong>
-                                </Typography>
-                                <Typography variant="body2">
-                                    Progress: <strong>{batch.currentQuantity} / {batch.targetQuantity} kg</strong>
-                                </Typography>
-                                <LinearProgress
-                                    variant="determinate"
-                                    value={(batch.currentQuantity / batch.targetQuantity) * 100}
-                                    sx={{ mt: 1, mb: 2 }}
+                                <Chip
+                                    label={batch.status}
+                                    size="small"
+                                    color={getStatusColor(batch.status)}
                                 />
-                                <Typography variant="caption" color="text.secondary">
-                                    Operator: {batch.operator}
-                                </Typography>
-                                <Box sx={{ mt: 2 }}>
-                                    <Button
-                                        component={Link}
-                                        to={`/batches/${batch.id}`}
-                                        size="small"
-                                        variant="outlined"
-                                        fullWidth
-                                    >
-                                        View Details
-                                    </Button>
-                                </Box>
-                            </CardContent>
-                        </Card>
-                    </Grid>
+                            </Box>
+                            <Typography variant="body2" color="text.secondary" gutterBottom>
+                                {batch.productName}
+                            </Typography>
+                            <Typography variant="body2" sx={{ mt: 2 }}>
+                                Recycled Content: <strong>{batch.recycledPercentage}%</strong>
+                            </Typography>
+                            <Typography variant="body2">
+                                Progress: <strong>{batch.currentQuantity} / {batch.targetQuantity} kg</strong>
+                            </Typography>
+                            <LinearProgress
+                                variant="determinate"
+                                value={(batch.currentQuantity / batch.targetQuantity) * 100}
+                                sx={{ mt: 1, mb: 2 }}
+                            />
+                            <Typography variant="caption" color="text.secondary">
+                                Operator: {batch.operator}
+                            </Typography>
+                            <Box sx={{ mt: 2 }}>
+                                <Button
+                                    component={Link}
+                                    to={`/batches/${batch.id}`}
+                                    size="small"
+                                    variant="outlined"
+                                    fullWidth
+                                >
+                                    View Details
+                                </Button>
+                            </Box>
+                        </CardContent>
+                    </Card>
                 ))}
-            </Grid>
+            </Box>
         </Box>
     );
 };

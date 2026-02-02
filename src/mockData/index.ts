@@ -1,0 +1,231 @@
+export const mockUser = {
+    id: '1',
+    email: 'operator@aterum.com',
+    role: 'operator',
+    name: 'John Operator',
+    tenantId: 'tenant-1',
+};
+
+export const mockMeasurements = [
+    {
+        id: '1',
+        timestamp: new Date('2026-02-02T08:30:00'),
+        station: 'Intake Station',
+        processStep: 'Material Receipt - Ready for Production',
+        value: 500.5,
+        unit: 'kg',
+        materialType: 'RECYCLED',
+        materialCode: 'MAT-001',
+        operator: 'John Operator',
+        batchId: 'BATCH-2026-001',
+        status: 'APPROVED',
+    },
+    {
+        id: '2',
+        timestamp: new Date('2026-02-02T09:15:00'),
+        station: 'Mixing Station',
+        processStep: 'Before Mixing',
+        value: 450.2,
+        unit: 'kg',
+        materialType: 'VIRGIN',
+        materialCode: 'MAT-002',
+        operator: 'John Operator',
+        batchId: 'BATCH-2026-001',
+        status: 'PENDING',
+    },
+    {
+        id: '3',
+        timestamp: new Date('2026-02-02T10:45:00'),
+        station: 'Extrusion Station',
+        processStep: 'After Extrusion',
+        value: 850.0,
+        unit: 'kg',
+        materialType: 'MIXED',
+        materialCode: 'PROD-001',
+        operator: 'Jane Smith',
+        batchId: 'BATCH-2026-001',
+        status: 'APPROVED',
+    },
+];
+
+export const mockBatches = [
+    {
+        id: 'BATCH-2026-001',
+        type: 'PRODUCTION',
+        status: 'IN_PROGRESS',
+        productCode: 'PROD-001',
+        productName: 'Recycled Polyethylene Film',
+        recycledPercentage: 65.5,
+        startDate: new Date('2026-02-02T08:00:00'),
+        targetQuantity: 1000,
+        currentQuantity: 850,
+        operator: 'John Operator',
+    },
+    {
+        id: 'BATCH-2026-002',
+        type: 'PRODUCTION',
+        status: 'COMPLETED',
+        productCode: 'PROD-002',
+        productName: 'Virgin PET Bottles',
+        recycledPercentage: 0,
+        startDate: new Date('2026-02-01T08:00:00'),
+        completedDate: new Date('2026-02-01T16:00:00'),
+        targetQuantity: 500,
+        currentQuantity: 500,
+        operator: 'Jane Smith',
+    },
+    {
+        id: 'BATCH-2026-003',
+        type: 'PRODUCTION',
+        status: 'PENDING',
+        productCode: 'PROD-001',
+        productName: 'Recycled Polyethylene Film',
+        recycledPercentage: 70.0,
+        startDate: new Date('2026-02-03T08:00:00'),
+        targetQuantity: 800,
+        currentQuantity: 0,
+        operator: 'Unassigned',
+    },
+];
+
+export const mockVRCQs = [
+    {
+        id: 'VRCQ-001',
+        batchId: 'BATCH-2026-002',
+        productionPeriod: {
+            start: new Date('2026-02-01T08:00:00'),
+            end: new Date('2026-02-01T16:00:00'),
+        },
+        finishedProduct: {
+            type: 'Virgin PET Bottles',
+            quantity: 500,
+            unit: 'kg',
+        },
+        recycledContent: {
+            percentage: 0,
+            quantity: 0,
+        },
+        allocationStatus: 'AVAILABLE',
+        remainingQuantity: 0,
+    },
+    {
+        id: 'VRCQ-002',
+        batchId: 'BATCH-2026-001',
+        productionPeriod: {
+            start: new Date('2026-02-02T08:00:00'),
+            end: new Date('2026-02-02T14:00:00'),
+        },
+        finishedProduct: {
+            type: 'Recycled Polyethylene Film',
+            quantity: 850,
+            unit: 'kg',
+        },
+        recycledContent: {
+            percentage: 65.5,
+            quantity: 556.75,
+        },
+        allocationStatus: 'PARTIALLY_ALLOCATED',
+        allocatedQuantity: 200,
+        remainingQuantity: 356.75,
+    },
+];
+
+export const mockDiscrepancies = [
+    {
+        id: 'DISC-001',
+        type: 'MASS_BALANCE',
+        severity: 'HIGH',
+        description: 'Input-output mismatch in Batch BATCH-2026-001',
+        expectedValue: 1000,
+        actualValue: 950,
+        difference: -50,
+        unit: 'kg',
+        detected: new Date('2026-02-02T11:00:00'),
+        status: 'OPEN',
+        slaDeadline: new Date('2026-02-03T11:00:00'),
+    },
+    {
+        id: 'DISC-002',
+        type: 'VALIDATION',
+        severity: 'MEDIUM',
+        description: 'Missing scale reading at Extrusion Station',
+        detected: new Date('2026-02-02T09:30:00'),
+        status: 'RESOLVED',
+        resolvedAt: new Date('2026-02-02T10:15:00'),
+        resolution: 'Manual entry added and verified by supervisor',
+    },
+];
+
+export const mockCodebook = [
+    { code: 'CUST-A001', realIdentity: 'Acme Corporation', type: 'CUSTOMER', status: 'ACTIVE' },
+    { code: 'CUST-B002', realIdentity: 'Beta Industries', type: 'CUSTOMER', status: 'ACTIVE' },
+    { code: 'SUP-001', realIdentity: 'Recycling Supply Co.', type: 'SUPPLIER', status: 'ACTIVE' },
+    { code: 'MAT-001', realIdentity: 'Post-Consumer HDPE', type: 'MATERIAL', status: 'ACTIVE' },
+    { code: 'MAT-002', realIdentity: 'Virgin LDPE Pellets', type: 'MATERIAL', status: 'ACTIVE' },
+];
+
+export const mockDocuments = [
+    {
+        id: 'DOC-001',
+        name: 'ISO 14001 Certificate',
+        type: 'CERTIFICATION',
+        uploadDate: new Date('2025-12-01'),
+        expiryDate: new Date('2026-12-01'),
+        status: 'VALID',
+        fileUrl: '/mock/iso-certificate.pdf',
+    },
+    {
+        id: 'DOC-002',
+        name: 'PCX Audit Report Q4 2025',
+        type: 'AUDIT',
+        uploadDate: new Date('2026-01-15'),
+        status: 'VALID',
+        fileUrl: '/mock/audit-report.pdf',
+    },
+    {
+        id: 'DOC-003',
+        name: 'Material Safety Data Sheet - HDPE',
+        type: 'SAFETY',
+        uploadDate: new Date('2025-11-20'),
+        expiryDate: new Date('2026-05-15'),
+        status: 'EXPIRING_SOON',
+        fileUrl: '/mock/msds-hdpe.pdf',
+    },
+];
+
+export const mockPunchListTasks = [
+    {
+        id: 'TASK-001',
+        title: 'Complete Q1 2026 Evidence Package',
+        description: 'Compile all documentation for Q1 certification',
+        priority: 'HIGH',
+        status: 'IN_PROGRESS',
+        assignedTo: 'Supervisor Team',
+        dueDate: new Date('2026-03-31'),
+        dependencies: [],
+        progress: 60,
+    },
+    {
+        id: 'TASK-002',
+        title: 'Verify Scale Calibrations',
+        description: 'Ensure all weighing scales are calibrated',
+        priority: 'MEDIUM',
+        status: 'PENDING',
+        assignedTo: 'Maintenance',
+        dueDate: new Date('2026-02-15'),
+        dependencies: [],
+        progress: 0,
+    },
+    {
+        id: 'TASK-003',
+        title: 'Review MES Integration Logs',
+        description: 'Check for any integration errors in the past month',
+        priority: 'LOW',
+        status: 'COMPLETED',
+        assignedTo: 'IT Team',
+        dueDate: new Date('2026-02-01'),
+        completedDate: new Date('2026-01-30'),
+        dependencies: [],
+        progress: 100,
+    },
+];

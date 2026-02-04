@@ -135,7 +135,8 @@ export const mockDiscrepancies = [
         id: 'DISC-001',
         type: 'MASS_BALANCE',
         severity: 'HIGH',
-        description: 'Input-output mismatch in Batch BATCH-2026-001',
+        description: 'Input-output mismatch',
+        batchId: 'BATCH-2026-001',
         expectedValue: 1000,
         actualValue: 950,
         difference: -50,
@@ -149,6 +150,7 @@ export const mockDiscrepancies = [
         type: 'VALIDATION',
         severity: 'MEDIUM',
         description: 'Missing scale reading at Extrusion Station',
+        batchId: 'BATCH-2026-001',
         detected: new Date('2026-02-02T09:30:00'),
         status: 'RESOLVED',
         resolvedAt: new Date('2026-02-02T10:15:00'),
@@ -162,6 +164,8 @@ export const mockCodebook = [
     { code: 'SUP-001', realIdentity: 'Recycling Supply Co.', type: 'SUPPLIER', status: 'ACTIVE' },
     { code: 'MAT-001', realIdentity: 'Post-Consumer HDPE', type: 'MATERIAL', status: 'ACTIVE' },
     { code: 'MAT-002', realIdentity: 'Virgin LDPE Pellets', type: 'MATERIAL', status: 'ACTIVE' },
+    { code: 'PROD-001', realIdentity: 'Recycled Polyethylene Film', type: 'MATERIAL', status: 'ACTIVE' },
+    { code: 'PROD-002', realIdentity: 'Virgin PET Bottles', type: 'MATERIAL', status: 'ACTIVE' },
 ];
 
 export const mockDocuments = [

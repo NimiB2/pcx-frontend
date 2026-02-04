@@ -1,5 +1,5 @@
-import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import React, { useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
     AppBar,
     Box,
@@ -15,35 +15,31 @@ import {
     Avatar,
     Menu,
     MenuItem,
+    Switch,
+    FormControlLabel,
+    Chip,
+    Divider,
 } from '@mui/material';
 import {
     Dashboard as DashboardIcon,
     Science as MeasurementIcon,
     Inventory as BatchIcon,
     Assessment as VRCQIcon,
-    LocalOffer as CodebookIcon,
     Folder as DocumentIcon,
-    CheckCircle as PunchListIcon,
     Warning as ReconciliationIcon,
-    BarChart as ReportsIcon,
-    AccountCircle,
+    Settings as AdminIcon,
+    Lan as MesIcon, // For connectivity
     Menu as MenuIcon,
+    People as UsersIcon,
 } from '@mui/icons-material';
-import { mockUser } from '../mockData';
+import { useAuth } from '../contexts/AuthContext';
+import { useData } from '../contexts/DataContext';
+import { useTheme } from '@mui/material/styles';
 
-const drawerWidth = 240;
+const drawerWidth = 260;
 
-const menuItems = [
-    { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
-    { text: 'Measurements', icon: <MeasurementIcon />, path: '/measurements' },
-    { text: 'Batches', icon: <BatchIcon />, path: '/batches' },
-    { text: 'VRCQ Manager', icon: <VRCQIcon />, path: '/vrcq' },
-    { text: 'Codebook', icon: <CodebookIcon />, path: '/codebook' },
-    { text: 'Documents', icon: <DocumentIcon />, path: '/documents' },
-    { text: 'Punch List', icon: <PunchListIcon />, path: '/punchlist' },
-    { text: 'Reconciliation', icon: <ReconciliationIcon />, path: '/reconciliation' },
-    { text: 'Reports', icon: <ReportsIcon />, path: '/reports' },
-];
+
+
 
 interface LayoutProps {
     children: React.ReactNode;
@@ -51,8 +47,34 @@ interface LayoutProps {
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
     const location = useLocation();
-    const [mobileOpen, setMobileOpen] = React.useState(false);
-    const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
+    const navigate = useNavigate();
+    const { user, logout } = useAuth();
+    const theme = useTheme();
+
+    const menuItems = [
+        { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
+        ...(user?.role === 'operator' ? [
+            { text: 'Measurements', icon: <MeasurementIcon />, path: '/measurements' },
+        ] : []),
+        ...(user?.role === 'admin' ? [
+            { text: 'Reconciliation', icon: <ReconciliationIcon />, path: '/reconciliation' },
+            { text: 'Batch Management', icon: <BatchIcon />, path: '/batches' },
+            { text: 'Mass Balance (VRCQ)', icon: <VRCQIcon />, path: '/vrcq' },
+            { text: 'Reports & Logs', icon: <DocumentIcon />, path: '/reports' },
+            { text: 'Documents & P.List', icon: <DocumentIcon />, path: '/documents' },
+            { text: 'Codebook & Admin', icon: <AdminIcon />, path: '/codebook' },
+            { text: 'User Management', icon: <UsersIcon />, path: '/users' },
+        ] : []),
+    ];
+
+    const [mobileOpen, setMobileOpen] = useState(false);
+    const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+
+    // Data Context
+    const { isMasked, toggleMasking } = useData();
+
+    // Mock States for UI Demo (MES still mocked locally)
+    const [mesOnline, setMesOnline] = useState(true);
 
     const handleDrawerToggle = () => {
         setMobileOpen(!mobileOpen);
@@ -66,28 +88,52 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         setAnchorEl(null);
     };
 
+    const handleLogout = () => {
+        handleClose();
+        logout();
+        navigate('/login');
+    };
+
     const drawer = (
-        <div>
-            <Toolbar>
-                <Typography variant="h6" noWrap component="div" fontWeight="bold">
-                    PCX Pilot
+        <Box sx={{ height: '100%', backgroundColor: '#1A2027', color: '#FFFFFF' }}>
+            <Toolbar sx={{ backgroundColor: '#000000', minHeight: '64px' }}>
+                <Typography variant="h6" noWrap component="div" fontWeight="bold" sx={{ color: '#fff', letterSpacing: 1 }}>
+                    PCX CONTROL
                 </Typography>
             </Toolbar>
-            <List>
+            <Divider sx={{ borderColor: '#424242' }} />
+            <List sx={{ pt: 2 }}>
                 {menuItems.map((item) => (
-                    <ListItem key={item.text} disablePadding>
+                    <ListItem key={item.text} disablePadding sx={{ mb: 1 }}>
                         <ListItemButton
                             component={Link}
                             to={item.path}
                             selected={location.pathname === item.path}
+                            sx={{
+                                '&.Mui-selected': {
+                                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                                    borderLeft: `4px solid ${theme.palette.warning.main}`,
+                                    '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.2)' },
+                                },
+                                '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.05)' },
+                            }}
                         >
-                            <ListItemIcon>{item.icon}</ListItemIcon>
-                            <ListItemText primary={item.text} />
+                            <ListItemIcon sx={{ color: '#E0E0E0', minWidth: 40 }}>{item.icon}</ListItemIcon>
+                            <ListItemText
+                                primary={item.text}
+                                primaryTypographyProps={{ fontSize: '0.85rem', fontWeight: 600, color: '#FFFFFF' }}
+                            />
                         </ListItemButton>
                     </ListItem>
                 ))}
             </List>
-        </div>
+
+            <Box sx={{ position: 'absolute', bottom: 20, width: '100%', textAlign: 'center' }}>
+                <Typography variant="caption" sx={{ color: '#757575' }}>
+                    System Version 2.4.0
+                </Typography>
+            </Box>
+        </Box>
     );
 
     return (
@@ -97,6 +143,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 sx={{
                     width: { sm: `calc(100% - ${drawerWidth}px)` },
                     ml: { sm: `${drawerWidth}px` },
+                    backgroundColor: '#FFFFFF',
+                    color: '#000000',
+                    boxShadow: '0px 1px 3px rgba(0,0,0,0.1)',
+                    borderBottom: '1px solid #E0E0E0'
                 }}
             >
                 <Toolbar>
@@ -108,13 +158,42 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                     >
                         <MenuIcon />
                     </IconButton>
-                    <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-                        Plastic Recycling Credit Measurement System
-                    </Typography>
+
+                    {/* Action Header Items */}
+                    <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', gap: 3 }}>
+                        {/* MES Connection Status */}
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, border: '1px solid #E0E0E0', padding: '4px 12px', borderRadius: '4px' }}>
+                            <MesIcon sx={{ color: mesOnline ? theme.palette.success.main : theme.palette.error.main, fontSize: 20 }} />
+                            <Typography variant="body2" fontWeight="bold">
+                                MES: {mesOnline ? 'ONLINE' : 'OFFLINE'}
+                            </Typography>
+                        </Box>
+
+                        {/* Masking Toggle */}
+                        <Box sx={{ display: 'flex', alignItems: 'center', border: '1px solid #E0E0E0', padding: '0px 12px', borderRadius: '4px' }}>
+                            <FormControlLabel
+                                control={
+                                    <Switch
+                                        size="small"
+                                        checked={isMasked}
+                                        onChange={toggleMasking}
+                                        color="warning"
+                                    />
+                                }
+                                label={
+                                    <Typography variant="body2" fontWeight="bold" color="textSecondary">
+                                        {isMasked ? "MASKING: ON" : "MASKING: OFF"}
+                                    </Typography>
+                                }
+                            />
+                        </Box>
+                    </Box>
+
+                    {/* User Profile */}
                     <div>
                         <IconButton onClick={handleMenu} color="inherit">
-                            <Avatar sx={{ width: 32, height: 32 }}>
-                                {mockUser.name.charAt(0)}
+                            <Avatar sx={{ width: 32, height: 32, bgcolor: theme.palette.primary.main }}>
+                                {user?.name?.charAt(0) || 'U'}
                             </Avatar>
                         </IconButton>
                         <Menu
@@ -124,11 +203,11 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                         >
                             <MenuItem disabled>
                                 <Typography variant="body2">
-                                    {mockUser.name} ({mockUser.role})
+                                    {user?.name || 'User'} ({user?.role || 'Guest'})
                                 </Typography>
                             </MenuItem>
                             <MenuItem onClick={handleClose}>Profile</MenuItem>
-                            <MenuItem onClick={handleClose}>Logout</MenuItem>
+                            <MenuItem onClick={handleLogout}>Logout</MenuItem>
                         </Menu>
                     </div>
                 </Toolbar>
@@ -153,7 +232,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                     variant="permanent"
                     sx={{
                         display: { xs: 'none', sm: 'block' },
-                        '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },
+                        '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth, borderRight: 'none' },
                     }}
                     open
                 >
@@ -167,6 +246,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                     p: 3,
                     width: { sm: `calc(100% - ${drawerWidth}px)` },
                     mt: 8,
+                    backgroundColor: theme.palette.background.default,
+                    minHeight: '100vh',
                 }}
             >
                 {children}

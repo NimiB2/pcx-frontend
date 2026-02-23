@@ -11,7 +11,7 @@ export interface RiskAssessment {
 export function calculateBatchCreditEligibleInput(batch: BatchRecord) {
     let totalEligibleKg = 0;
 
-    batch.outputs.forEach(output => {
+    (batch.outputs || []).forEach(output => {
         if (output.type === 'FINAL_PRODUCT') {
             totalEligibleKg += output.quantityKg;
         }
@@ -20,7 +20,7 @@ export function calculateBatchCreditEligibleInput(batch: BatchRecord) {
     let rigidPercentage = 0;
     let nonRigidPercentage = 0;
 
-    batch.composition.forEach(comp => {
+    (batch.composition || []).forEach(comp => {
         if (comp.rigidity === 'RIGID') {
             rigidPercentage += comp.percentage;
         } else if (comp.rigidity === 'NON_RIGID') {
@@ -51,7 +51,7 @@ export function calculateBatchCreditEligibleInput(batch: BatchRecord) {
  */
 export function assessCreditsAtRisk(batch: BatchRecord, measurements: any[], discrepancies: any[] = []): RiskAssessment {
     // 1. HIGH - output > input (mass balance violation)
-    const totalOutput = batch.outputs.reduce((sum, o) => sum + o.quantityKg, 0) + (batch.quantities?.returned || 0);
+    const totalOutput = (batch.outputs || []).reduce((sum, o) => sum + o.quantityKg, 0) + (batch.quantities?.returned || 0);
     const totalInput = batch.quantities?.consumed || batch.quantities?.received || 0;
 
     if (totalOutput > totalInput && totalInput > 0) {
@@ -122,7 +122,7 @@ export function calculateCreditEligibleInput(batch: BatchRecord, measurements: a
     let rigidPercentage = 0;
     let nonRigidPercentage = 0;
 
-    batch.composition.forEach(comp => {
+    (batch.composition || []).forEach(comp => {
         if (comp.rigidity === 'RIGID') {
             rigidPercentage += comp.percentage;
         } else if (comp.rigidity === 'NON_RIGID') {
@@ -264,7 +264,7 @@ export function forecastEligibleKg(batches: BatchRecord[]) {
     // but here is the logic.
     let kgFromCompleted = 0;
     completedBatches.forEach(b => {
-        const finalProducts = b.outputs ? b.outputs.filter(o => o.type === 'FINAL_PRODUCT').reduce((sum, o) => sum + o.quantityKg, 0) : 0;
+        const finalProducts = (b.outputs || []).filter(o => o.type === 'FINAL_PRODUCT').reduce((sum, o) => sum + o.quantityKg, 0);
         kgFromCompleted += (finalProducts > 0 ? finalProducts : (b.quantities?.expected || 0)) * 0.8;
     });
 

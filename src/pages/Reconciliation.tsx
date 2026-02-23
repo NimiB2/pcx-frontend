@@ -12,7 +12,8 @@ import {
     Button,
     Grid,
     IconButton,
-    Tooltip
+    Tooltip,
+    Chip
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import {
@@ -182,19 +183,27 @@ const Reconciliation: React.FC = () => {
 
                                 {/* Variance Column */}
                                 <TableCell align="center" sx={{ borderLeft: '2px solid #ccc', fontWeight: 'bold' }}>
-                                    <Typography
-                                        color={Math.abs(row.variance) > 5 ? 'error' : Math.abs(row.variance) > 2 ? 'warning.main' : 'success.main'}
-                                        fontWeight="800"
-                                    >
-                                        {row.variance > 0 ? '+' : ''}{row.variance.toFixed(2)}%
-                                    </Typography>
+                                    {row.original.type === 'CREDITS_AT_RISK' ? (
+                                        <Typography color="error" fontWeight="800">RISK</Typography>
+                                    ) : (
+                                        <Typography
+                                            color={Math.abs(row.variance) > 5 ? 'error' : Math.abs(row.variance) > 2 ? 'warning.main' : 'success.main'}
+                                            fontWeight="800"
+                                        >
+                                            {row.variance > 0 ? '+' : ''}{row.variance.toFixed(2)}%
+                                        </Typography>
+                                    )}
                                 </TableCell>
 
                                 <TableCell align="center">
-                                    <StatusBadge
-                                        status={row.status === 'RESOLVED' ? 'success' : Math.abs(row.variance) > 5 ? 'error' : 'warning'}
-                                        label={row.status === 'RESOLVED' ? 'RESOLVED' : 'OPEN'}
-                                    />
+                                    {row.original.type === 'CREDITS_AT_RISK' ? (
+                                        <Chip label="CREDITS AT RISK" color="error" variant="outlined" size="small" sx={{ fontWeight: 'bold' }} />
+                                    ) : (
+                                        <StatusBadge
+                                            status={row.status === 'RESOLVED' ? 'success' : Math.abs(row.variance) > 5 ? 'error' : 'warning'}
+                                            label={row.status === 'RESOLVED' ? 'RESOLVED' : 'OPEN'}
+                                        />
+                                    )}
                                 </TableCell>
 
                                 <TableCell align="right">

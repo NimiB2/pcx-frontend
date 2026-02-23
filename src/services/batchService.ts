@@ -9,13 +9,34 @@
 // Types and Interfaces
 // ============================================================================
 
-export type BatchStatus = 'RECEIVED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+export type BatchStatus = 'RECEIVED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED' | 'OVERDUE_PENDING_APPROVAL' | 'APPROVED_OVERDUE';
 export type ProductType = 'PELLETS' | 'FLAKES' | 'GRANULES' | 'REGRIND';
+export type OutputType = 'FINAL_PRODUCT' | 'WASTE' | 'RETURNED_MATERIAL';
+
+export interface CreditEligibleBreakdown {
+    rigidKg: number;
+    nonRigidKg: number;
+    totalEligibleKg: number;
+    rigidPercentage: number;
+    nonRigidPercentage: number;
+}
+
+export interface ReturnedMaterial {
+    quantityKg: number;
+    rigidPercentage: number;
+    nonRigidPercentage: number;
+    returnedAt: Date;
+    returnedBy: string;
+    destinationWarehouse: string;
+    sourceBatchId: string;
+    newMaterialCode: string;
+}
 
 export interface MaterialComposition {
     materialTypeCode: string;
     materialTypeName: string;
     classification: 'RECYCLED' | 'VIRGIN' | 'MIXED';
+    rigidity: 'RIGID' | 'NON_RIGID';
     percentage: number;
 }
 
@@ -23,9 +44,19 @@ export interface BatchQuantities {
     expected: number;
     received: number;
     consumed: number;
-    yielded: number;
-    waste: number;
+    returned: number;
     unit: 'kg' | 'lbs' | 'ton';
+}
+
+export interface BatchOutput {
+    id: string;
+    type: OutputType;
+    quantityKg: number;
+    creditEligible: boolean;
+    rigidKg: number;
+    nonRigidKg: number;
+    recordedAt: Date;
+    recordedBy: string;
 }
 
 export interface BatchRecord {
@@ -33,12 +64,23 @@ export interface BatchRecord {
     status: BatchStatus;
     productName: string;
     productType: ProductType;
+    vehicleId: string;
+    source: 'SUPPLIER' | 'WAREHOUSE';
     composition: MaterialComposition[];
     quantities: BatchQuantities;
+    outputs: BatchOutput[];
     startDate: Date;
     completionDate: Date | null;
     sourceDocumentId: string | null;
     linkedMeasurementIds: string[];
+    creditEligibleInput?: CreditEligibleBreakdown;
+    overdueApproval?: {
+        requestedAt: Date;
+        approvedAt?: Date;
+        approvedBy?: string;
+        reason: string;
+        daysOpen: number;
+    };
     notes?: string;
     metadata: {
         supplier?: string;
@@ -57,6 +99,8 @@ export interface BatchRecord {
 export interface CreateBatchInput {
     productName: string;
     productType: ProductType;
+    vehicleId: string;
+    source: 'SUPPLIER' | 'WAREHOUSE';
     composition: MaterialComposition[];
     expectedQuantity: number;
     unit: 'kg' | 'lbs' | 'ton';
@@ -100,20 +144,24 @@ class BatchStore {
     private initializeMockData(): void {
         const mockBatches: Omit<BatchRecord, 'id'>[] = [
             {
-                status: 'IN_PROGRESS',
+                status: 'OVERDUE_PENDING_APPROVAL',
                 productName: 'Recycled HDPE Pellets',
                 productType: 'PELLETS',
+                vehicleId: 'TRK-2026-01',
+                source: 'SUPPLIER',
                 composition: [
                     {
                         materialTypeCode: 'MAT-R01',
                         materialTypeName: 'Post-Consumer HDPE',
                         classification: 'RECYCLED',
+                        rigidity: 'RIGID',
                         percentage: 85,
                     },
                     {
                         materialTypeCode: 'MAT-V02',
                         materialTypeName: 'Virgin HDPE',
                         classification: 'VIRGIN',
+                        rigidity: 'NON_RIGID',
                         percentage: 15,
                     },
                 ],
@@ -121,11 +169,32 @@ class BatchStore {
                     expected: 5000,
                     received: 5020,
                     consumed: 3200,
-                    yielded: 2800,
-                    waste: 150,
+                    returned: 250,
                     unit: 'kg',
                 },
-                startDate: new Date('2026-02-01'),
+                outputs: [
+                    {
+                        id: 'OUT-001',
+                        type: 'FINAL_PRODUCT',
+                        quantityKg: 2800,
+                        creditEligible: true,
+                        rigidKg: 2380,
+                        nonRigidKg: 420,
+                        recordedAt: new Date('2026-02-03T14:00:00'),
+                        recordedBy: 'OP-001',
+                    },
+                    {
+                        id: 'OUT-002',
+                        type: 'WASTE',
+                        quantityKg: 150,
+                        creditEligible: false,
+                        rigidKg: 0,
+                        nonRigidKg: 0,
+                        recordedAt: new Date('2026-02-03T15:00:00'),
+                        recordedBy: 'OP-001',
+                    }
+                ],
+                startDate: new Date('2026-02-19'),
                 completionDate: null,
                 sourceDocumentId: 'DOC-2026-001',
                 linkedMeasurementIds: [],
@@ -147,11 +216,14 @@ class BatchStore {
                 status: 'COMPLETED',
                 productName: 'Recycled PET Flakes',
                 productType: 'FLAKES',
+                vehicleId: 'TRK-2026-02',
+                source: 'WAREHOUSE',
                 composition: [
                     {
                         materialTypeCode: 'MAT-R05',
                         materialTypeName: 'Post-Consumer PET',
                         classification: 'RECYCLED',
+                        rigidity: 'RIGID',
                         percentage: 100,
                     },
                 ],
@@ -159,10 +231,31 @@ class BatchStore {
                     expected: 3000,
                     received: 2985,
                     consumed: 2985,
-                    yielded: 2750,
-                    waste: 235,
+                    returned: 0,
                     unit: 'kg',
                 },
+                outputs: [
+                    {
+                        id: 'OUT-003',
+                        type: 'FINAL_PRODUCT',
+                        quantityKg: 2750,
+                        creditEligible: true,
+                        rigidKg: 2750,
+                        nonRigidKg: 0,
+                        recordedAt: new Date('2026-01-31T14:00:00'),
+                        recordedBy: 'OP-001',
+                    },
+                    {
+                        id: 'OUT-004',
+                        type: 'WASTE',
+                        quantityKg: 235,
+                        creditEligible: false,
+                        rigidKg: 0,
+                        nonRigidKg: 0,
+                        recordedAt: new Date('2026-01-31T15:00:00'),
+                        recordedBy: 'OP-001',
+                    }
+                ],
                 startDate: new Date('2026-01-25'),
                 completionDate: new Date('2026-01-31'),
                 sourceDocumentId: 'DOC-2026-002',
@@ -185,11 +278,14 @@ class BatchStore {
                 status: 'RECEIVED',
                 productName: 'Mixed Plastic Regrind',
                 productType: 'REGRIND',
+                vehicleId: 'TRK-2026-03',
+                source: 'SUPPLIER',
                 composition: [
                     {
                         materialTypeCode: 'MAT-M01',
                         materialTypeName: 'Mixed PE/PP',
                         classification: 'MIXED',
+                        rigidity: 'NON_RIGID',
                         percentage: 100,
                     },
                 ],
@@ -197,10 +293,10 @@ class BatchStore {
                     expected: 1500,
                     received: 1500,
                     consumed: 0,
-                    yielded: 0,
-                    waste: 0,
+                    returned: 0,
                     unit: 'kg',
                 },
+                outputs: [],
                 startDate: new Date('2026-02-04'),
                 completionDate: null,
                 sourceDocumentId: null,
@@ -232,15 +328,17 @@ class BatchStore {
             status: 'RECEIVED',
             productName: input.productName,
             productType: input.productType,
+            vehicleId: input.vehicleId,
+            source: input.source,
             composition: input.composition,
             quantities: {
                 expected: input.expectedQuantity,
                 received: 0,
                 consumed: 0,
-                yielded: 0,
-                waste: 0,
+                returned: 0,
                 unit: input.unit,
             },
+            outputs: [],
             startDate: input.startDate,
             completionDate: null,
             sourceDocumentId: input.sourceDocumentId || null,
@@ -362,7 +460,11 @@ const batchStore = new BatchStore();
 
 export const batchService = {
     /**
-     * Create a new batch
+     * Creates a new batch record in the system.
+     * 
+     * @param {CreateBatchInput} input - The standard details for the new batch.
+     * @returns {Promise<BatchRecord>} A promise that resolves to the newly created batch record.
+     * @throws {Error} If the input validation fails (e.g. missing product name, negative quantity, invalid composition).
      */
     async createBatch(input: CreateBatchInput): Promise<BatchRecord> {
         // Validate input
@@ -389,7 +491,23 @@ export const batchService = {
     },
 
     /**
-     * Get batch by ID
+     * Calculates the number of days a batch has been open.
+     * 
+     * @param {BatchRecord} batch - The batch record to evaluate.
+     * @returns {number} The integer number of days since startDate
+     */
+    getBatchDaysOpen(batch: BatchRecord): number {
+        const now = new Date();
+        const start = new Date(batch.startDate);
+        const diffTime = Math.abs(now.getTime() - start.getTime());
+        return Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    },
+
+    /**
+     * Retrieves a batch record by its unique identifier.
+     * 
+     * @param {string} id - The unique identifier of the batch to retrieve.
+     * @returns {Promise<BatchRecord | null>} A promise that resolves to the batch record if found, or null if not found.
      */
     async getBatchById(id: string): Promise<BatchRecord | null> {
         await new Promise(resolve => setTimeout(resolve, 50));
@@ -397,7 +515,10 @@ export const batchService = {
     },
 
     /**
-     * Get all batches with optional filtering
+     * Retrieves a list of batch records, optionally sorted and filtered.
+     * 
+     * @param {BatchFilter} [filter] - Optional criteria to filter the batches (e.g. by status, date range).
+     * @returns {Promise<BatchRecord[]>} A promise that resolves to an array of matching batch records.
      */
     async getBatches(filter?: BatchFilter): Promise<BatchRecord[]> {
         await new Promise(resolve => setTimeout(resolve, 50));
@@ -405,7 +526,13 @@ export const batchService = {
     },
 
     /**
-     * Update batch status
+     * Updates the status of an existing batch.
+     * 
+     * @param {string} id - The unique identifier of the batch.
+     * @param {BatchStatus} status - The new status to apply (e.g., 'IN_PROGRESS', 'COMPLETED').
+     * @param {string} [updatedBy='OP-001'] - Identifier of the user making the update.
+     * @returns {Promise<BatchRecord>} A promise that resolves to the updated batch record.
+     * @throws {Error} If the batch with the specified ID cannot be found.
      */
     async updateBatchStatus(
         id: string,
@@ -421,7 +548,13 @@ export const batchService = {
     },
 
     /**
-     * Update batch quantities
+     * Updates the recorded quantities for a specific batch.
+     * 
+     * @param {string} id - The unique identifier of the batch.
+     * @param {Partial<Omit<BatchQuantities, 'unit'>>} quantities - The specific quantity fields to update (e.g., received, consumed).
+     * @param {string} [updatedBy='OP-001'] - Identifier of the user making the update.
+     * @returns {Promise<BatchRecord>} A promise that resolves to the updated batch record.
+     * @throws {Error} If the batch with the specified ID cannot be found.
      */
     async updateBatchQuantities(
         id: string,
@@ -437,7 +570,13 @@ export const batchService = {
     },
 
     /**
-     * Link a measurement to a batch
+     * Links a measurement record to a batch.
+     * 
+     * @param {string} batchId - The unique identifier of the batch.
+     * @param {string} measurementId - The unique identifier of the measurement to link.
+     * @param {string} [updatedBy='OP-001'] - Identifier of the user making the link.
+     * @returns {Promise<BatchRecord>} A promise that resolves to the updated batch record containing the new link.
+     * @throws {Error} If the batch with the specified ID cannot be found.
      */
     async linkMeasurementToBatch(
         batchId: string,
@@ -453,7 +592,13 @@ export const batchService = {
     },
 
     /**
-     * Update batch details
+     * Partially updates a batch record with the provided valid fields.
+     * 
+     * @param {string} id - The unique identifier of the batch.
+     * @param {Partial<BatchRecord>} updates - An object containing the fields to update.
+     * @param {string} [updatedBy='OP-001'] - Identifier of the user making the update.
+     * @returns {Promise<BatchRecord>} A promise that resolves to the fully updated batch record.
+     * @throws {Error} If the batch with the specified ID cannot be found.
      */
     async updateBatch(
         id: string,
@@ -469,36 +614,52 @@ export const batchService = {
     },
 
     /**
-     * Calculate batch efficiency
+     * Calculates the operational efficiency metrics for a given batch.
+     * 
+     * @param {BatchRecord} batch - The batch record to calculate metrics for.
+     * @returns {{yieldPercentage: number, wastePercentage: number, utilizationPercentage: number}} 
+     * An object containing standard percentage metrics (yield, waste, utilization) rounded to two decimal places.
      */
     calculateEfficiency(batch: BatchRecord): {
         yieldPercentage: number;
         wastePercentage: number;
         utilizationPercentage: number;
+        isMassBalanceValid: boolean;
     } {
-        const { received, yielded, waste } = batch.quantities;
+        const { received, returned, consumed } = batch.quantities;
+        const yielded = batch.outputs.filter(o => o.type === 'FINAL_PRODUCT').reduce((sum, o) => sum + o.quantityKg, 0);
+        const waste = batch.outputs.filter(o => o.type === 'WASTE').reduce((sum, o) => sum + o.quantityKg, 0);
 
         if (received === 0) {
             return {
                 yieldPercentage: 0,
                 wastePercentage: 0,
                 utilizationPercentage: 0,
+                isMassBalanceValid: true,
             };
         }
 
         const yieldPercentage = (yielded / received) * 100;
         const wastePercentage = (waste / received) * 100;
-        const utilizationPercentage = ((yielded + waste) / received) * 100;
+        const utilizationPercentage = ((yielded + waste + returned) / received) * 100;
+
+        // Mass Balance Concept: yielded + waste + returned = consumed
+        // Use a small epsilon to account for floating point errors
+        const isMassBalanceValid = Math.abs(yielded + waste + returned - consumed) < 0.01;
 
         return {
             yieldPercentage: Math.round(yieldPercentage * 100) / 100,
             wastePercentage: Math.round(wastePercentage * 100) / 100,
             utilizationPercentage: Math.round(utilizationPercentage * 100) / 100,
+            isMassBalanceValid,
         };
     },
 
     /**
-     * Get recycled content percentage
+     * Calculates the total percentage of recycled material in the batch composition.
+     * 
+     * @param {BatchRecord} batch - The batch record containing the material composition.
+     * @returns {number} The sum of percentages of all components classified as 'RECYCLED'.
      */
     getRecycledContentPercentage(batch: BatchRecord): number {
         const recycledPercentage = batch.composition

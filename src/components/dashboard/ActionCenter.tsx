@@ -51,10 +51,14 @@ function TabPanel(props: TabPanelProps) {
 
 const ActionCenter: React.FC = () => {
     const [tabValue, setTabValue] = useState(0);
-    const { discrepancies } = useData();
+    const { discrepancies, batches } = useData();
 
     // 1. Blocking Discrepancies
-    const blockingIssues = discrepancies.filter(d => d.severity === 'HIGH' && d.status === 'OPEN');
+    const creditsAtRisk = discrepancies.filter(d => d.type === 'CREDITS_AT_RISK' && d.status === 'OPEN');
+    const blockingIssues = discrepancies.filter(d => d.severity === 'HIGH' && d.status === 'OPEN' && d.type !== 'CREDITS_AT_RISK');
+
+    // 2. Overdue Batches
+    const overdueBatches = batches.filter(b => b.status === 'OVERDUE_PENDING_APPROVAL');
 
     // 2. Expiring Documents
     const expiringDocs = mockDocuments.filter(d => d.status === 'EXPIRING_SOON' || d.status === 'EXPIRED');
@@ -78,7 +82,7 @@ const ActionCenter: React.FC = () => {
                     textColor="primary"
                 >
                     <Tab
-                        icon={<Badge badgeContent={blockingIssues.length} color="error"><Warning /></Badge>}
+                        icon={<Badge badgeContent={blockingIssues.length + overdueBatches.length + creditsAtRisk.length} color="error"><Warning /></Badge>}
                         label="ALERTS"
                         sx={{ fontSize: '0.75rem', fontWeight: 'bold' }}
                     />
@@ -98,13 +102,22 @@ const ActionCenter: React.FC = () => {
             <Box sx={{ flex: 1, overflow: 'auto' }}>
                 {/* ALERTS TAB */}
                 <TabPanel value={tabValue} index={0}>
-                    {blockingIssues.length === 0 ? (
+                    {blockingIssues.length === 0 && overdueBatches.length === 0 && creditsAtRisk.length === 0 ? (
                         <Box sx={{ p: 4, textAlign: 'center', color: 'text.secondary' }}>
                             <CheckCircle color="success" sx={{ fontSize: 40, mb: 1 }} />
                             <Typography variant="body2">Automatic Monitor Clear</Typography>
                         </Box>
                     ) : (
                         <List disablePadding>
+                            {creditsAtRisk.map(issue => (
+                                <ListItemButton key={issue.id} component={Link} to={`/batches/${issue.batchId}`} divider>
+                                    <ListItemText
+                                        primary={<Typography variant="subtitle2" color="error" fontWeight="bold">CREDITS AT RISK</Typography>}
+                                        secondary={`Batch: ${issue.batchId} - ${issue.description}`}
+                                    />
+                                    <ArrowForward fontSize="small" color="action" />
+                                </ListItemButton>
+                            ))}
                             {blockingIssues.map(issue => (
                                 <ListItemButton key={issue.id} component={Link} to="/reconciliation" divider>
                                     <ListItemText
@@ -114,6 +127,18 @@ const ActionCenter: React.FC = () => {
                                     <ArrowForward fontSize="small" color="action" />
                                 </ListItemButton>
                             ))}
+                            {overdueBatches.map(batch => {
+                                const daysOpen = Math.floor(Math.abs(new Date().getTime() - new Date(batch.startDate).getTime()) / (1000 * 60 * 60 * 24));
+                                return (
+                                    <ListItemButton key={batch.id} component={Link} to={`/batches/${batch.id}`} divider>
+                                        <ListItemText
+                                            primary={<Typography variant="subtitle2" color="error" fontWeight="bold">OVERDUE BATCH</Typography>}
+                                            secondary={`${batch.productName} (Open for ${daysOpen} days)`}
+                                        />
+                                        <ArrowForward fontSize="small" color="action" />
+                                    </ListItemButton>
+                                );
+                            })}
                         </List>
                     )}
                 </TabPanel>

@@ -6,6 +6,7 @@ import UserManagement from './UserManagement';
 import Reports from './Reports';
 import Documents from './Documents';
 import Codebook from './Codebook';
+import CreditsDashboard from './CreditsDashboard';
 import React from 'react';
 import { Box, Typography, Paper, Stack } from '@mui/material';
 import { AdminLabel, FutureLabel } from '../components/common/Labels';
@@ -34,5 +35,5 @@ export const CreditAllocation: React.FC = () => (
 
 
 
-export { Reconciliation, VRCQManager, PunchList, UserManagement, Reports, Documents, Codebook };
+export { Reconciliation, VRCQManager, PunchList, UserManagement, Reports, Documents, Codebook, CreditsDashboard };
 export default BatchDetail;

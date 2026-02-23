@@ -8,6 +8,18 @@ interface EvidenceLinkProps {
     count?: number;
 }
 
+/**
+ * EvidenceLink Component
+ * 
+ * Renders an icon button linking to attached evidence files (e.g., weighbridge tickets, photos).
+ * Displays a tooltip indicating the number of attachments or a generic view message.
+ * 
+ * @component
+ * @param {EvidenceLinkProps} props - The component props.
+ * @param {boolean} props.hasEvidence - Controls whether the link is visible.
+ * @param {() => void} [props.onClick] - Callback when the icon is clicked.
+ * @param {number} [props.count] - Optional count of evidence files attached.
+ */
 const EvidenceLink: React.FC<EvidenceLinkProps> = ({ hasEvidence, onClick, count }) => {
     if (!hasEvidence) return null;
 

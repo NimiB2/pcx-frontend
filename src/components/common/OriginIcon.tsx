@@ -12,6 +12,16 @@ interface OriginIconProps {
     type: OriginType;
 }
 
+/**
+ * OriginIcon Component
+ * 
+ * A visual indicator showing the data source origin of a measurement.
+ * Displays different icons and tooltips for manual entry, MES scale data, or direct scale integration.
+ * 
+ * @component
+ * @param {OriginIconProps} props - The component props.
+ * @param {OriginType} props.type - The source type ('manual', 'mes', or 'scale').
+ */
 const OriginIcon: React.FC<OriginIconProps> = ({ type }) => {
     let icon = <ManualIcon fontSize="small" />;
     let tooltip = "Manual Entry";

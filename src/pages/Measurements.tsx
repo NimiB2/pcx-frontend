@@ -22,6 +22,15 @@ import { Add, Visibility, CheckCircle, Warning, Error as ErrorIcon } from '@mui/
 import { Link } from 'react-router-dom';
 import { measurementService, MeasurementRecord } from '../services/measurementService';
 
+/**
+ * Measurements Component
+ * 
+ * This page component displays a comprehensive table of all measurement records
+ * registered in the system. It supports filtering by validation status, source type,
+ * and text search, pulling data from the measurementService.
+ * 
+ * @component
+ */
 const Measurements: React.FC = () => {
     const [measurements, setMeasurements] = useState<MeasurementRecord[]>([]);
     const [filteredMeasurements, setFilteredMeasurements] = useState<MeasurementRecord[]>([]);

@@ -17,12 +17,25 @@ import {
 import { Save, Cancel, Add, Delete } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { batchService, CreateBatchInput, MaterialComposition, ProductType } from '../services/batchService';
+import { mockReturnedMaterials } from '../mockData/index';
+import { Chip } from '@mui/material';
 
+/**
+ * BatchCreate Component
+ * 
+ * Provides a form interface for users to register a new production batch.
+ * It handles input validation, dynamic material composition rows, and
+ * submission to the batch service.
+ * 
+ * @component
+ */
 const BatchCreate: React.FC = () => {
     const navigate = useNavigate();
     const [formData, setFormData] = useState({
         productName: '',
         productType: 'PELLETS' as ProductType,
+        vehicleId: '',
+        source: '',
         expectedQuantity: '',
         unit: 'kg' as 'kg' | 'lbs' | 'ton',
         startDate: new Date().toISOString().split('T')[0],
@@ -30,6 +43,7 @@ const BatchCreate: React.FC = () => {
         lotNumber: '',
         qualityGrade: '',
         notes: '',
+        sourceBatchId: '',
     });
 
     const [composition, setComposition] = useState<MaterialComposition[]>([
@@ -37,6 +51,7 @@ const BatchCreate: React.FC = () => {
             materialTypeCode: '',
             materialTypeName: '',
             classification: 'RECYCLED',
+            rigidity: '' as Extract<MaterialComposition['rigidity'], string>,
             percentage: 0,
         },
     ]);
@@ -46,6 +61,28 @@ const BatchCreate: React.FC = () => {
     const [snackbarMessage, setSnackbarMessage] = useState('');
     const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error'>('success');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [returnedMaterialInfo, setReturnedMaterialInfo] = useState<any>(null);
+
+    React.useEffect(() => {
+        if (formData.source === 'WAREHOUSE' && formData.sourceBatchId) {
+            const returned = mockReturnedMaterials.find(rm => rm.sourceBatchId === formData.sourceBatchId);
+            if (returned) {
+                setReturnedMaterialInfo(returned);
+                // Auto-fill composition logic
+                setComposition([{
+                    materialTypeCode: returned.newMaterialCode,
+                    materialTypeName: 'Returned Material',
+                    classification: 'RECYCLED',
+                    rigidity: returned.rigidPercentage >= 50 ? 'RIGID' : 'NON_RIGID',
+                    percentage: 100,
+                }]);
+            } else {
+                setReturnedMaterialInfo(null);
+            }
+        } else {
+            setReturnedMaterialInfo(null);
+        }
+    }, [formData.source, formData.sourceBatchId]);
 
     const addCompositionRow = () => {
         setComposition([
@@ -54,6 +91,7 @@ const BatchCreate: React.FC = () => {
                 materialTypeCode: '',
                 materialTypeName: '',
                 classification: 'RECYCLED',
+                rigidity: '' as Extract<MaterialComposition['rigidity'], string>,
                 percentage: 0,
             },
         ]);
@@ -80,6 +118,14 @@ const BatchCreate: React.FC = () => {
             newErrors.productName = 'Product name is required';
         }
 
+        if (!formData.vehicleId.trim()) {
+            newErrors.vehicleId = 'Vehicle ID is required';
+        }
+
+        if (!formData.source) {
+            newErrors.source = 'Material source is required';
+        }
+
         if (!formData.expectedQuantity || parseFloat(formData.expectedQuantity) <= 0) {
             newErrors.expectedQuantity = 'Expected quantity must be greater than 0';
         }
@@ -96,6 +142,9 @@ const BatchCreate: React.FC = () => {
             }
             if (!comp.materialTypeName.trim()) {
                 newErrors[`comp_name_${idx}`] = 'Material name is required';
+            }
+            if (!comp.rigidity) {
+                newErrors[`comp_rigidity_${idx}`] = 'Rigidity is required';
             }
             if (comp.percentage <= 0 || comp.percentage > 100) {
                 newErrors[`comp_pct_${idx}`] = 'Percentage must be between 0 and 100';
@@ -120,7 +169,9 @@ const BatchCreate: React.FC = () => {
             const input: CreateBatchInput = {
                 productName: formData.productName.trim(),
                 productType: formData.productType,
-                composition: composition,
+                vehicleId: formData.vehicleId.trim(),
+                source: formData.source as 'SUPPLIER' | 'WAREHOUSE',
+                composition: composition as unknown as MaterialComposition[],
                 expectedQuantity: parseFloat(formData.expectedQuantity),
                 unit: formData.unit,
                 startDate: new Date(formData.startDate),
@@ -185,6 +236,58 @@ const BatchCreate: React.FC = () => {
                         error={!!errors.productName}
                         helperText={errors.productName}
                     />
+
+                    <TextField
+                        fullWidth
+                        label="Vehicle ID"
+                        value={formData.vehicleId}
+                        onChange={(e) => {
+                            setFormData({ ...formData, vehicleId: e.target.value });
+                            setErrors({ ...errors, vehicleId: '' });
+                        }}
+                        placeholder="e.g., TRK-2026-01"
+                        required
+                        error={!!errors.vehicleId}
+                        helperText={errors.vehicleId}
+                    />
+
+                    <FormControl fullWidth error={!!errors.source}>
+                        <InputLabel>Material Source *</InputLabel>
+                        <Select
+                            value={formData.source}
+                            label="Material Source *"
+                            onChange={(e) => {
+                                setFormData({ ...formData, source: e.target.value });
+                                setErrors({ ...errors, source: '' });
+                            }}
+                        >
+                            <MenuItem value="SUPPLIER">Supplier</MenuItem>
+                            <MenuItem value="WAREHOUSE">Warehouse</MenuItem>
+                        </Select>
+                        {errors.source && <Typography color="error" variant="caption" sx={{ ml: 2, mt: 0.5 }}>{errors.source}</Typography>}
+                    </FormControl>
+
+                    {formData.source === 'WAREHOUSE' && (
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                            <TextField
+                                fullWidth
+                                label="Source Batch ID"
+                                value={formData.sourceBatchId}
+                                onChange={(e) => setFormData({ ...formData, sourceBatchId: e.target.value })}
+                                placeholder="e.g., BATCH-2026-001"
+                                helperText="Enter the ID of the batch this material was returned from"
+                            />
+                            {returnedMaterialInfo && (
+                                <Box sx={{ mt: 1 }}>
+                                    <Chip
+                                        color="info"
+                                        size="small"
+                                        label={`Returned Material — Rigid ${returnedMaterialInfo.rigidPercentage}% / Non-Rigid ${returnedMaterialInfo.nonRigidPercentage}%`}
+                                    />
+                                </Box>
+                            )}
+                        </Box>
+                    )}
 
                     <FormControl fullWidth>
                         <InputLabel>Product Type *</InputLabel>
@@ -252,7 +355,7 @@ const BatchCreate: React.FC = () => {
 
                 {composition.map((comp, index) => (
                     <Paper key={index} variant="outlined" sx={{ p: 2, mb: 2 }}>
-                        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '2fr 2fr 1.5fr 1fr auto' }, gap: 2, alignItems: 'start' }}>
+                        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '2fr 2fr 1.5fr 1.5fr 1fr auto' }, gap: 2, alignItems: 'start' }}>
                             <TextField
                                 fullWidth
                                 size="small"
@@ -288,6 +391,19 @@ const BatchCreate: React.FC = () => {
                                     <MenuItem value="VIRGIN">Virgin</MenuItem>
                                     <MenuItem value="MIXED">Mixed</MenuItem>
                                 </Select>
+                            </FormControl>
+
+                            <FormControl fullWidth size="small" error={!!errors[`comp_rigidity_${index}`]}>
+                                <InputLabel>Rigidity</InputLabel>
+                                <Select
+                                    value={comp.rigidity || ''}
+                                    label="Rigidity"
+                                    onChange={(e) => updateComposition(index, 'rigidity', e.target.value)}
+                                >
+                                    <MenuItem value="RIGID">Rigid</MenuItem>
+                                    <MenuItem value="NON_RIGID">Non-Rigid</MenuItem>
+                                </Select>
+                                {errors[`comp_rigidity_${index}`] && <Typography color="error" variant="caption" sx={{ ml: 2, mt: 0.5 }}>{errors[`comp_rigidity_${index}`]}</Typography>}
                             </FormControl>
 
                             <TextField

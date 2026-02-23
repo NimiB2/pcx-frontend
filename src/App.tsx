@@ -21,7 +21,9 @@ import {
   Reconciliation,
   Reports,
   UserManagement,
+  CreditsDashboard,
 } from './pages/index';
+import Leaderboard from './pages/Leaderboard';
 import './styles/App.scss';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { DataProvider } from './contexts/DataContext';
@@ -76,7 +78,9 @@ function App() {
                       <Route path="/batches/create" element={<BatchCreate />} />
                       <Route path="/batches/:id" element={<BatchDetail />} />
                       <Route path="/vrcq" element={<VRCQManager />} />
-                      <Route path="/credits" element={<CreditAllocation />} />
+                      <Route path="/leaderboard" element={<Leaderboard />} />
+                      <Route path="/credits/dashboard" element={<CreditsDashboard />} />
+                      <Route path="/credits/allocation" element={<CreditAllocation />} />
                       <Route path="/codebook" element={<Codebook />} />
                       <Route path="/documents" element={<Documents />} />
                       <Route path="/punchlist" element={<PunchList />} />

@@ -9,6 +9,20 @@ interface ImmutableValueProps {
     history?: { user: string; date: string; reason: string; oldValue: string | number }[];
 }
 
+/**
+ * ImmutableValue Component
+ * 
+ * Displays a value with its unit and an optional audit history.
+ * If the value has been updated, it shows the previous value with a strikethrough.
+ * Clicking the history icon reveals a popover with the full audit trail.
+ * 
+ * @component
+ * @param {ImmutableValueProps} props - The component props.
+ * @param {string | number} props.currentValue - The current value to display.
+ * @param {string | number} [props.previousValue] - The old value, displayed stricken through.
+ * @param {string} [props.unit] - The unit of measurement (e.g., 'kg', 'lbs').
+ * @param {Array<{user: string, date: string, reason: string, oldValue: string | number}>} [props.history] - Audit log of changes.
+ */
 const ImmutableValue: React.FC<ImmutableValueProps> = ({ currentValue, previousValue, unit, history }) => {
     const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
 

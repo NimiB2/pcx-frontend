@@ -25,10 +25,21 @@ import {
     Science,
     Grass,
     AttachFile,
+    LocationOn,
+    LocationOff,
 } from '@mui/icons-material';
 import { measurementService, MeasurementRecord } from '../services/measurementService';
 import { batchService } from '../services/batchService';
 
+/**
+ * MeasurementDetail Component
+ * 
+ * Displays in-depth information about a specific measurement record.
+ * This includes the recorded value, context (station/step), material classification,
+ * operator audit trail, and any attached evidence documents.
+ * 
+ * @component
+ */
 const MeasurementDetail: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
@@ -348,6 +359,56 @@ const MeasurementDetail: React.FC = () => {
                         ) : (
                             <Alert severity="info">
                                 No evidence documents attached to this measurement
+                            </Alert>
+                        )}
+                    </Paper>
+
+                    {/* Location Verification */}
+                    <Paper sx={{ p: 3, mb: 3 }}>
+                        <Typography variant="h6" fontWeight="bold" gutterBottom>
+                            Location Verification
+                        </Typography>
+                        <Divider sx={{ my: 2 }} />
+
+                        {measurement.gpsTag ? (
+                            <Box>
+                                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                                    {measurement.gpsTag.isWithinRange ? (
+                                        <Chip icon={<LocationOn />} label="Verified" color="success" size="small" />
+                                    ) : (
+                                        <Chip icon={<LocationOff />} label="Mismatch" color="error" size="small" />
+                                    )}
+                                    <Typography variant="body2" sx={{ ml: 2, color: 'text.secondary' }}>
+                                        {measurement.gpsTag.distanceFromStation !== undefined
+                                            ? `~${measurement.gpsTag.distanceFromStation}m from station`
+                                            : 'Distance unknown'}
+                                    </Typography>
+                                </Box>
+
+                                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+                                    <Box>
+                                        <Typography variant="caption" color="text.secondary">Coordinates</Typography>
+                                        <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                                            {measurement.gpsTag.lat.toFixed(6)}, {measurement.gpsTag.lng.toFixed(6)}
+                                        </Typography>
+                                    </Box>
+                                    <Box>
+                                        <Typography variant="caption" color="text.secondary">Accuracy</Typography>
+                                        <Typography variant="body2">
+                                            ±{Math.round(measurement.gpsTag.accuracy)}m
+                                        </Typography>
+                                    </Box>
+                                </Box>
+                            </Box>
+                        ) : (
+                            <Alert severity="warning" sx={{ mt: 1 }}>
+                                No GPS data available for this entry.
+                            </Alert>
+                        )}
+
+                        {measurement.metadata.flags?.includes('LOCATION_MISMATCH') && (
+                            <Alert severity="error" sx={{ mt: 2 }}>
+                                <strong>Warning:</strong> Entry was recorded outside the allowed station proximity.
                             </Alert>
                         )}
                     </Paper>

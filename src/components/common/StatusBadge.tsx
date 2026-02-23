@@ -9,6 +9,17 @@ interface StatusBadgeProps {
     label: string;
 }
 
+/**
+ * StatusBadge Component
+ * 
+ * A customizable chip component used to display status labels (e.g., VALIDATED, PENDING, FLAGGED).
+ * It uses predefined theme colors corresponding to the status severity.
+ * 
+ * @component
+ * @param {StatusBadgeProps} props - The component props.
+ * @param {StatusType} props.status - Severity levels guiding the badge's color ('error', 'warning', 'success', 'info', 'default').
+ * @param {string} props.label - The text displayed inside the badge.
+ */
 const StatusBadge: React.FC<StatusBadgeProps> = ({ status, label }) => {
     const theme = useTheme();
 

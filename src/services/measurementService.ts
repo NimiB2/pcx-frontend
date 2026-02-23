@@ -1,6 +1,8 @@
 // Measurement Service - In-memory implementation for Phase 1
 // This will be replaced with API calls in Phase 2
 
+import { GPSTag } from '../utils/gpsService';
+
 export interface MeasurementRecord {
     id: string;
     source: 'MES' | 'SCALE' | 'MANUAL' | 'DOCUMENT_SCAN';
@@ -20,11 +22,14 @@ export interface MeasurementRecord {
     materialTypeCode: string;
     evidenceLinks: Evidence[];
     validationStatus: 'PENDING' | 'VALIDATED' | 'FLAGGED';
+    gpsTag?: GPSTag;
+    reliabilityScore: 'HIGHEST' | 'HIGH' | 'MEDIUM' | 'LOWEST';
     metadata: {
         entryJustification?: string;
         supersedes?: string | null;
         supersededBy?: string | null;
         notes?: string;
+        flags?: string[];
     };
     audit: {
         createdAt: Date;
@@ -63,8 +68,26 @@ export interface CreateMeasurementInput {
     materialTypeCode: string;
     operatorId: string;
     operatorName: string;
+    gpsTag?: GPSTag;
     notes?: string;
     entryJustification?: string;
+}
+
+export function calculateReliabilityScore(
+    source: string,
+    gpsTag?: GPSTag
+): 'HIGHEST' | 'HIGH' | 'MEDIUM' | 'LOWEST' {
+    if (source === 'MES') return 'HIGHEST';
+
+    if (source === 'SCALE') {
+        return (gpsTag && gpsTag.isWithinRange) ? 'HIGH' : 'MEDIUM';
+    }
+
+    if (source === 'MANUAL') {
+        return (gpsTag && gpsTag.isWithinRange) ? 'MEDIUM' : 'LOWEST';
+    }
+
+    return 'MEDIUM'; // fallback
 }
 
 // In-memory storage (will be replaced with database in Phase 2)
@@ -98,6 +121,15 @@ class MeasurementStore {
                 materialTypeCode: 'MAT-R01',
                 evidenceLinks: [],
                 validationStatus: 'VALIDATED',
+                reliabilityScore: 'HIGH',
+                gpsTag: {
+                    lat: 34.0522,
+                    lng: -118.2437,
+                    accuracy: 5,
+                    capturedAt: new Date('2026-02-04T08:30:00'),
+                    distanceFromStation: 15,
+                    isWithinRange: true,
+                },
                 metadata: {
                     notes: 'Clean material, ready for processing',
                 },
@@ -126,9 +158,10 @@ class MeasurementStore {
                 materialTypeCode: 'MAT-V01',
                 evidenceLinks: [],
                 validationStatus: 'PENDING',
+                reliabilityScore: 'LOWEST', // manual, no gps
                 metadata: {
                     entryJustification: 'Scale temporarily unavailable',
-                    notes: 'Virgin material addition for recipe compliance',
+                    notes: 'Virgin material addition for recipe compliance. No GPS — location unverified',
                 },
                 audit: {
                     createdAt: new Date('2026-02-04T09:15:20'),
@@ -155,6 +188,7 @@ class MeasurementStore {
                 materialTypeCode: 'PROD-001',
                 evidenceLinks: [],
                 validationStatus: 'VALIDATED',
+                reliabilityScore: 'HIGHEST',
                 metadata: {},
                 audit: {
                     createdAt: new Date('2026-02-04T10:45:02'),
@@ -176,6 +210,20 @@ class MeasurementStore {
 
     create(input: CreateMeasurementInput): MeasurementRecord {
         const now = new Date();
+
+        const metadataFlags: string[] = [];
+        let notes = input.notes || '';
+
+        if (input.source === 'MANUAL' && !input.gpsTag) {
+            notes += (notes ? ' | ' : '') + 'No GPS — location unverified';
+        }
+
+        if (input.gpsTag && input.gpsTag.isWithinRange === false) {
+            metadataFlags.push('LOCATION_MISMATCH');
+        }
+
+        const reliabilityScore = calculateReliabilityScore(input.source, input.gpsTag);
+
         const measurement: MeasurementRecord = {
             id: this.generateId(),
             source: input.source,
@@ -195,11 +243,14 @@ class MeasurementStore {
             materialTypeCode: input.materialTypeCode,
             evidenceLinks: [],
             validationStatus: input.source === 'MANUAL' ? 'PENDING' : 'VALIDATED',
+            gpsTag: input.gpsTag,
+            reliabilityScore,
             metadata: {
-                notes: input.notes,
+                notes: notes,
                 entryJustification: input.entryJustification,
                 supersedes: null,
                 supersededBy: null,
+                flags: metadataFlags.length > 0 ? metadataFlags : undefined,
             },
             audit: {
                 createdAt: now,
@@ -304,7 +355,11 @@ const measurementStore = new MeasurementStore();
 // Public API
 export const measurementService = {
     /**
-     * Create a new measurement record
+     * Creates a new measurement record in the system.
+     * 
+     * @param {CreateMeasurementInput} input - The details for the new measurement.
+     * @returns {Promise<MeasurementRecord>} A promise that resolves to the newly created measurement record.
+     * @throws {Error} If validation fails (e.g. negative value, missing material code, missing step).
      */
     createMeasurement: async (input: CreateMeasurementInput): Promise<MeasurementRecord> => {
         // Validate input
@@ -325,7 +380,10 @@ export const measurementService = {
     },
 
     /**
-     * Get measurement by ID
+     * Retrieves a measurement record by its unique identifier.
+     * 
+     * @param {string} id - The unique identifier of the measurement to retrieve.
+     * @returns {Promise<MeasurementRecord | undefined>} A promise that resolves to the measurement record if found, or undefined if not.
      */
     getMeasurementById: async (id: string): Promise<MeasurementRecord | undefined> => {
         await new Promise(resolve => setTimeout(resolve, 50));
@@ -333,7 +391,10 @@ export const measurementService = {
     },
 
     /**
-     * Get all measurements with optional filtering
+     * Retrieves a list of measurement records, optionally filtered by specified criteria.
+     * 
+     * @param {MeasurementFilter} [filter] - Optional criteria to filter measurements.
+     * @returns {Promise<MeasurementRecord[]>} A promise that resolves to an array of matching measurement records.
      */
     getMeasurements: async (filter?: MeasurementFilter): Promise<MeasurementRecord[]> => {
         await new Promise(resolve => setTimeout(resolve, 50));
@@ -341,7 +402,13 @@ export const measurementService = {
     },
 
     /**
-     * Create a superseding measurement (for corrections)
+     * Creates a new measurement that supersedes an existing one (e.g., for corrections).
+     * The original measurement is retained for audit purposes.
+     * 
+     * @param {string} originalId - The ID of the measurement being superseded.
+     * @param {CreateMeasurementInput} newMeasurement - The new replacement measurement details.
+     * @returns {Promise<MeasurementRecord>} A promise that resolves to the newly created superseding measurement.
+     * @throws {Error} If the original measurement cannot be found.
      */
     supersedeMeasurement: async (
         originalId: string,
@@ -352,7 +419,12 @@ export const measurementService = {
     },
 
     /**
-     * Attach evidence to a measurement
+     * Attaches an evidence record (like a photo or document) to a measurement.
+     * 
+     * @param {string} measurementId - The ID of the measurement.
+     * @param {Evidence} evidence - The evidence metadata to attach.
+     * @returns {Promise<MeasurementRecord>} A promise that resolves to the updated measurement record.
+     * @throws {Error} If the measurement cannot be found.
      */
     attachEvidence: async (measurementId: string, evidence: Evidence): Promise<MeasurementRecord> => {
         await new Promise(resolve => setTimeout(resolve, 100));
@@ -360,7 +432,12 @@ export const measurementService = {
     },
 
     /**
-     * Update validation status
+     * Updates the validation status of a measurement.
+     * 
+     * @param {string} measurementId - The ID of the measurement.
+     * @param {'PENDING' | 'VALIDATED' | 'FLAGGED'} status - The new validation status.
+     * @returns {Promise<MeasurementRecord>} A promise that resolves to the updated measurement record.
+     * @throws {Error} If the measurement cannot be found.
      */
     updateValidationStatus: async (
         measurementId: string,
@@ -371,7 +448,12 @@ export const measurementService = {
     },
 
     /**
-     * Delete measurement (admin only - for Phase 2)
+     * Deletes a measurement record (requires admin privileges).
+     * Note: In a production system, this would likely be a soft delete.
+     * 
+     * @param {string} id - The ID of the measurement to delete.
+     * @param {string} adminId - The ID of the admin performing the deletion (for audit logs).
+     * @returns {Promise<void>} A promise that resolves when the deletion is complete.
      */
     deleteMeasurement: async (id: string, adminId: string): Promise<void> => {
         await new Promise(resolve => setTimeout(resolve, 50));

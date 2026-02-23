@@ -5,7 +5,9 @@ import {
     mockMeasurements,
     mockPunchListTasks,
     mockVRCQs,
-    mockCodebook
+    mockCodebook,
+    mockCreditSummary,
+    mockMonthlyCredits
 } from '../mockData';
 
 // Define types based on mock data structure
@@ -67,11 +69,31 @@ export interface PunchListTask {
     dependencies?: string[];
 }
 
+export interface CreditSummary {
+    totalEligibleKg: number;
+    totalRigidKg: number;
+    totalNonRigidKg: number;
+    flaggedKg: number;
+    flaggedPercentage: number;
+    completionPercentage: number;
+    annualTargetKg: number;
+    projectedYearEndKg: number;
+}
+
+export interface MonthlyCredit {
+    month: string;
+    actual: number;
+    projected: number;
+    isProjected: boolean;
+}
+
 interface DataContextType {
     batches: Batch[];
     discrepancies: Discrepancy[];
     measurements: Measurement[];
     punchListTasks: PunchListTask[];
+    creditSummary: CreditSummary;
+    monthlyCredits: MonthlyCredit[];
 
     // Actions
     updateBatchStatus: (batchId: string, status: string) => void;
@@ -103,6 +125,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [discrepancies, setDiscrepancies] = useState<Discrepancy[]>(mockDiscrepancies as any[]);
     const [measurements, setMeasurements] = useState<Measurement[]>(mockMeasurements as any[]);
     const [punchListTasks, setPunchListTasks] = useState<PunchListTask[]>(mockPunchListTasks as any[]);
+    const [creditSummary, setCreditSummary] = useState<CreditSummary>(mockCreditSummary);
+    const [monthlyCredits, setMonthlyCredits] = useState<MonthlyCredit[]>(mockMonthlyCredits);
 
     const updateBatchStatus = (batchId: string, status: string) => {
         setBatches(prev => prev.map(b =>
@@ -161,6 +185,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             discrepancies,
             measurements,
             punchListTasks,
+            creditSummary,
+            monthlyCredits,
             updateBatchStatus,
             resolveDiscrepancy,
             addMeasurement,

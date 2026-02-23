@@ -21,10 +21,12 @@ import {
     WifiOff,
     CheckCircle,
     Flag,
-    ArrowForward
+    ArrowForward,
+    EmojiEvents
 } from '@mui/icons-material';
 import { Link } from 'react-router-dom';
-import { mockBatches, mockMeasurements } from '../../mockData';
+import { mockBatches, mockMeasurements, mockLeaderboard } from '../../mockData';
+import { getPersonalTip } from '../../utils/leaderboardService';
 import ShiftNotes from '../../components/dashboard/ShiftNotes';
 import SystemAlertBanner from '../../components/dashboard/SystemAlertBanner';
 import MorningChecklist from '../../components/dashboard/MorningChecklist';
@@ -38,6 +40,8 @@ const OperatorDashboard: React.FC = () => {
 
     // Calculate progress for visual bar
     const progressPercent = Math.min(((activeBatch.currentQuantity || 0) / (activeBatch.targetQuantity || 1)) * 100, 100);
+
+    const personalEntry = mockLeaderboard.find(d => d.role === 'operator' && d.userId === '1') || mockLeaderboard.find(d => d.role === 'operator');
 
     return (
         <Box sx={{ position: 'relative', pb: 8 }}>
@@ -208,6 +212,51 @@ const OperatorDashboard: React.FC = () => {
 
                 {/* Right Column: Shift Notes & Checklist */}
                 <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', gap: 3 }}>
+                    {personalEntry && (
+                        <Card sx={{ bgcolor: '#fff8e1', border: '1px solid #ffe082' }}>
+                            <CardContent>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        <EmojiEvents sx={{ color: '#FFD700' }} />
+                                        <Typography variant="h6" fontWeight="bold">Your Standing</Typography>
+                                    </Box>
+                                    <Typography variant="h4" fontWeight="bold" color="primary.main">
+                                        #{personalEntry.rank}
+                                    </Typography>
+                                </Box>
+
+                                <Box sx={{ mb: 2 }}>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                                        <Typography variant="body2" color="text.secondary">Current Score</Typography>
+                                        <Typography variant="body2" fontWeight="bold">{personalEntry.totalScore} pts</Typography>
+                                    </Box>
+                                    <LinearProgress
+                                        variant="determinate"
+                                        value={75} // Mock progress towards next rank
+                                        sx={{ height: 6, borderRadius: 3, bgcolor: 'rgba(0,0,0,0.05)', '& .MuiLinearProgress-bar': { bgcolor: '#FFCA28' } }}
+                                    />
+                                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5, textAlign: 'right' }}>
+                                        25 pts to rank #{Math.max(1, personalEntry.rank - 1)}
+                                    </Typography>
+                                </Box>
+
+                                <Typography variant="body2" sx={{ bgcolor: 'rgba(255, 215, 0, 0.15)', p: 1.5, borderRadius: 2, mb: 2 }}>
+                                    <strong>Tip:</strong> {getPersonalTip(personalEntry)}
+                                </Typography>
+
+                                <Button
+                                    component={Link}
+                                    to="/leaderboard"
+                                    variant="outlined"
+                                    color="inherit"
+                                    fullWidth
+                                    sx={{ borderColor: '#ffe082', '&:hover': { bgcolor: 'rgba(255, 215, 0, 0.1)' } }}
+                                >
+                                    View Full Leaderboard
+                                </Button>
+                            </CardContent>
+                        </Card>
+                    )}
                     <MorningChecklist />
                     <ShiftNotes />
                 </Box>

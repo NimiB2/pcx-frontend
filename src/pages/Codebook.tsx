@@ -26,6 +26,15 @@ import {
 import { mockCodebook } from '../mockData';
 import { useAuth } from '../contexts/AuthContext';
 
+/**
+ * Codebook Component
+ * 
+ * Provides an administrative interface for managing confidential identity mappings.
+ * It allows admins to view and toggle the visibility of real identities (e.g., Suppliers, Customers)
+ * behind privacy codes used throughout the system.
+ * 
+ * @component
+ */
 const Codebook: React.FC = () => {
     // In a real app, useData() would provide codebook actions
     // For now, we read from mock data

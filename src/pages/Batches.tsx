@@ -18,7 +18,17 @@ import {
 import { Add, Visibility, CheckCircle, Warning, Error as ErrorIcon } from '@mui/icons-material';
 import { Link } from 'react-router-dom';
 import { batchService, BatchRecord, BatchStatus } from '../services/batchService';
+import { checkBatchOverdueStatus } from '../utils/batchValidation';
 
+/**
+ * Batches Component
+ * 
+ * This page component displays a list of production batches in the PCX system.
+ * It provides functionality to view, filter, and track the progress of various batches,
+ * connecting to the local batchService to fetch real-time (in-memory) data.
+ * 
+ * @component
+ */
 const Batches: React.FC = () => {
     const [batches, setBatches] = useState<BatchRecord[]>([]);
     const [filteredBatches, setFilteredBatches] = useState<BatchRecord[]>([]);
@@ -36,7 +46,9 @@ const Batches: React.FC = () => {
     const loadBatches = async () => {
         try {
             const data = await batchService.getBatches();
-            setBatches(data);
+            await checkBatchOverdueStatus(data);
+            const updatedData = await batchService.getBatches();
+            setBatches(updatedData);
             setLoading(false);
         } catch (error) {
             console.error('Error loading batches:', error);
@@ -51,6 +63,13 @@ const Batches: React.FC = () => {
             filtered = filtered.filter(b => b.status === statusFilter);
         }
 
+        // Sort overdue batches to the top
+        filtered.sort((a, b) => {
+            if (a.status === 'OVERDUE_PENDING_APPROVAL' && b.status !== 'OVERDUE_PENDING_APPROVAL') return -1;
+            if (b.status === 'OVERDUE_PENDING_APPROVAL' && a.status !== 'OVERDUE_PENDING_APPROVAL') return 1;
+            return b.startDate.getTime() - a.startDate.getTime();
+        });
+
         setFilteredBatches(filtered);
     };
 
@@ -60,6 +79,8 @@ const Batches: React.FC = () => {
             case 'IN_PROGRESS': return 'primary';
             case 'RECEIVED': return 'info';
             case 'CANCELLED': return 'error';
+            case 'OVERDUE_PENDING_APPROVAL': return 'error';
+            case 'APPROVED_OVERDUE': return 'warning';
             default: return 'default';
         }
     };
@@ -150,8 +171,13 @@ const Batches: React.FC = () => {
                                 <CardContent>
                                     {/* Header */}
                                     <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                                        <Typography variant="h6" fontWeight="bold" fontFamily="monospace">
+                                        <Typography variant="h6" fontWeight="bold" fontFamily="monospace" sx={{ display: 'flex', alignItems: 'center' }}>
                                             {batch.id}
+                                            {batchService.getBatchDaysOpen(batch) > 2 && (
+                                                <Tooltip title={`Batch open for ${batchService.getBatchDaysOpen(batch)} days`}>
+                                                    <Warning color="warning" sx={{ ml: 1, fontSize: '1.2rem' }} />
+                                                </Tooltip>
+                                            )}
                                         </Typography>
                                         <Chip
                                             label={batch.status.replace('_', ' ')}
@@ -164,6 +190,11 @@ const Batches: React.FC = () => {
                                     <Typography variant="body1" fontWeight="medium" gutterBottom>
                                         {batch.productName}
                                     </Typography>
+
+                                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                        Vehicle ID: {batch.vehicleId || 'N/A'}
+                                    </Typography>
+
                                     <Chip
                                         label={batch.productType}
                                         size="small"
@@ -207,7 +238,7 @@ const Batches: React.FC = () => {
                                     />
 
                                     {/* Efficiency Stats (for completed or in-progress batches) */}
-                                    {batch.status !== 'RECEIVED' && batch.quantities.yielded > 0 && (
+                                    {batch.status !== 'RECEIVED' && batch.outputs && batch.outputs.filter(o => o.type === 'FINAL_PRODUCT').reduce((s, o) => s + o.quantityKg, 0) > 0 && (
                                         <Box sx={{ mb: 2 }}>
                                             <Typography variant="caption" color="text.secondary">
                                                 Yield: {efficiency.yieldPercentage}% | Waste: {efficiency.wastePercentage}%

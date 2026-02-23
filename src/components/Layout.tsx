@@ -31,6 +31,8 @@ import {
     Lan as MesIcon, // For connectivity
     Menu as MenuIcon,
     People as UsersIcon,
+    AccountBalance as CreditsIcon,
+    EmojiEvents as TrophyIcon
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../contexts/DataContext';
@@ -55,11 +57,14 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
         ...(user?.role === 'operator' ? [
             { text: 'Measurements', icon: <MeasurementIcon />, path: '/measurements' },
+            { text: 'Leaderboard', icon: <TrophyIcon />, path: '/leaderboard' },
         ] : []),
         ...(user?.role === 'admin' ? [
             { text: 'Reconciliation', icon: <ReconciliationIcon />, path: '/reconciliation' },
             { text: 'Batch Management', icon: <BatchIcon />, path: '/batches' },
             { text: 'Mass Balance (VRCQ)', icon: <VRCQIcon />, path: '/vrcq' },
+            { text: 'Leaderboard', icon: <TrophyIcon />, path: '/leaderboard' },
+            { text: 'Credits Dashboard', icon: <CreditsIcon />, path: '/credits/dashboard' },
             { text: 'Reports & Logs', icon: <DocumentIcon />, path: '/reports' },
             { text: 'Documents & P.List', icon: <DocumentIcon />, path: '/documents' },
             { text: 'Codebook & Admin', icon: <AdminIcon />, path: '/codebook' },

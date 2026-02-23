@@ -44,6 +44,9 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { measurementService, CreateMeasurementInput } from '../services/measurementService';
 import { mockBatches } from '../mockData';
+import { STATIONS_GPS } from '../utils/stationCoordinates';
+import { gpsService, GPSTag } from '../utils/gpsService';
+import { LocationOn, LocationOff } from '@mui/icons-material';
 
 // --- Types & Constants ---
 
@@ -75,6 +78,17 @@ interface IngredientRow {
 
 // --- Components ---
 
+/**
+ * MeasurementCapture Component
+ * 
+ * A wizard-style multi-step interface for capturing new measurement records.
+ * The workflow includes:
+ * 1. Setup (Station & Context definition)
+ * 2. Data (Recording values, supporting single/mixing inputs)
+ * 3. Evidence (Attaching photos or scanned documents)
+ * 
+ * @component
+ */
 const MeasurementCapture: React.FC = () => {
     const navigate = useNavigate();
 
@@ -87,6 +101,11 @@ const MeasurementCapture: React.FC = () => {
     const [stationId, setStationId] = useState('INTAKE-01');
     const [processStep, setProcessStep] = useState(PROCESS_STEPS[0]);
     const [currentTime, setCurrentTime] = useState(new Date());
+
+    // GPS
+    const [gpsTag, setGpsTag] = useState<GPSTag | null>(null);
+    const [gpsLoading, setGpsLoading] = useState(false);
+    const [gpsError, setGpsError] = useState<string | null>(null);
 
     // Batch
     const [batchId, setBatchId] = useState('');
@@ -119,8 +138,24 @@ const MeasurementCapture: React.FC = () => {
     // --- Effects ---
 
     useEffect(() => {
+        let isMounted = true;
+        setGpsLoading(true);
+        gpsService.requestGPSLocation()
+            .then(tag => {
+                if (isMounted) setGpsTag(tag);
+            })
+            .catch(err => {
+                if (isMounted) setGpsError(err.message || 'GPS unavailable');
+            })
+            .finally(() => {
+                if (isMounted) setGpsLoading(false);
+            });
+
         const timer = setInterval(() => setCurrentTime(new Date()), 60000); // Update minutely
-        return () => clearInterval(timer);
+        return () => {
+            isMounted = false;
+            clearInterval(timer);
+        };
     }, []);
 
     // Update batch status when selected - REMOVED, now derived from activeBatch
@@ -139,6 +174,18 @@ const MeasurementCapture: React.FC = () => {
     const isMixing = currentStation?.type === 'MIXING';
     const totalMixingWeight = ingredients.reduce((sum, row) => sum + (parseFloat(row.weight) || 0), 0);
     const activeBatch = mockBatches.find(b => b.id === batchId);
+
+    const currentStationCoords = STATIONS_GPS[stationId];
+    let distanceMeters: number | undefined = undefined;
+    let isWithinRange: boolean | undefined = undefined;
+    if (gpsTag && currentStationCoords) {
+        const validation = gpsService.validateGPSProximity(
+            { lat: gpsTag.lat, lng: gpsTag.lng },
+            currentStationCoords
+        );
+        distanceMeters = validation.distanceMeters;
+        isWithinRange = validation.isValid;
+    }
 
     // --- Validation & Workflow ---
 
@@ -188,6 +235,11 @@ const MeasurementCapture: React.FC = () => {
                 unit,
                 operatorId: 'OP-001', // Mock
                 operatorName: 'Operator 1',
+                gpsTag: gpsTag ? {
+                    ...gpsTag,
+                    distanceFromStation: distanceMeters,
+                    isWithinRange: isWithinRange
+                } : undefined,
                 notes: notes || undefined,
                 entryJustification: justification || undefined,
             };
@@ -348,6 +400,27 @@ const MeasurementCapture: React.FC = () => {
                                 <Alert severity="info" sx={{ mt: 1, py: 0 }}>
                                     Status: {activeBatch.status.replace('_', ' ')} | Product: {activeBatch.productName}
                                 </Alert>
+                            )}
+                        </Box>
+
+                        <Divider />
+
+                        <Box>
+                            <Typography variant="subtitle2" gutterBottom>Location Verification</Typography>
+                            {gpsLoading ? (
+                                <Alert severity="info" icon={<LocationOn />}>Capturing GPS coordinates...</Alert>
+                            ) : gpsError ? (
+                                <Alert severity="warning" icon={<LocationOff />}>
+                                    GPS unavailable — entry will be marked as location unverified.
+                                </Alert>
+                            ) : gpsTag && distanceMeters !== undefined ? (
+                                <Alert severity={isWithinRange ? "success" : "warning"} icon={<LocationOn />}>
+                                    {isWithinRange
+                                        ? `You are ~${distanceMeters}m from ${currentStation?.name} ✓`
+                                        : `You appear to be ~${distanceMeters}m away from ${currentStation?.name} — please confirm your location.`}
+                                </Alert>
+                            ) : (
+                                <Alert severity="warning">Station coordinates not configured for distance check.</Alert>
                             )}
                         </Box>
 

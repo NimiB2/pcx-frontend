@@ -19,6 +19,15 @@ interface Task {
     criticality: 'blocking' | 'warning' | 'info';
 }
 
+/**
+ * PunchList Component
+ * 
+ * Displays a checklist of tasks required for certification readiness.
+ * It shows the overall progress, task statuses, expiry warnings, and allows
+ * users to toggle task completion. Critical path management for final audits.
+ * 
+ * @component
+ */
 const PunchList: React.FC = () => {
     const theme = useTheme();
     const { punchListTasks, updateTaskStatus } = useData();

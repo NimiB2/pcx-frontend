@@ -12,6 +12,16 @@
 export type BatchStatus = 'RECEIVED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED' | 'OVERDUE_PENDING_APPROVAL' | 'APPROVED_OVERDUE';
 export type ProductType = 'PELLETS' | 'FLAKES' | 'GRANULES' | 'REGRIND';
 export type OutputType = 'FINAL_PRODUCT' | 'WASTE' | 'RETURNED_MATERIAL';
+export type VRCQApprovalStatus = 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED';
+
+export interface VRCQApproval {
+    status: VRCQApprovalStatus;
+    requestedAt: Date;
+    reviewedAt?: Date;
+    reviewedBy?: string;
+    notes?: string;
+    rejectionReason?: string;
+}
 
 export interface CreditEligibleBreakdown {
     rigidKg: number;
@@ -82,6 +92,7 @@ export interface BatchRecord {
         daysOpen: number;
     };
     notes?: string;
+    vrcqApproval?: VRCQApproval;
     metadata: {
         supplier?: string;
         lotNumber?: string;
@@ -261,6 +272,10 @@ class BatchStore {
                 sourceDocumentId: 'DOC-2026-002',
                 linkedMeasurementIds: [],
                 notes: 'Completed successfully',
+                vrcqApproval: {
+                    status: 'PENDING_APPROVAL',
+                    requestedAt: new Date('2026-01-31T16:30:00'),
+                },
                 metadata: {
                     supplier: 'GreenCycle Inc',
                     lotNumber: 'LOT-2026-Q1-002',
@@ -614,11 +629,70 @@ export const batchService = {
     },
 
     /**
+     * Approves the VRCQ for a batch.
+     */
+    async approveVRCQ(batchId: string, notes: string, reviewedBy: string): Promise<BatchRecord> {
+        const batch = batchStore.getById(batchId);
+        if (!batch) throw new Error(`Batch ${batchId} not found`);
+
+        batch.vrcqApproval = {
+            status: 'APPROVED',
+            requestedAt: batch.vrcqApproval?.requestedAt || new Date(),
+            reviewedAt: new Date(),
+            reviewedBy,
+            notes,
+        };
+        batch.audit.lastModifiedAt = new Date();
+        batch.audit.lastModifiedBy = reviewedBy;
+        batch.audit.version++;
+
+        await new Promise(resolve => setTimeout(resolve, 100));
+        return batch;
+    },
+
+    /**
+     * Rejects the VRCQ for a batch.
+     */
+    async rejectVRCQ(batchId: string, rejectionReason: string, reviewedBy: string): Promise<BatchRecord> {
+        const batch = batchStore.getById(batchId);
+        if (!batch) throw new Error(`Batch ${batchId} not found`);
+
+        batch.vrcqApproval = {
+            status: 'REJECTED',
+            requestedAt: batch.vrcqApproval?.requestedAt || new Date(),
+            reviewedAt: new Date(),
+            reviewedBy,
+            rejectionReason,
+        };
+        batch.audit.lastModifiedAt = new Date();
+        batch.audit.lastModifiedBy = reviewedBy;
+        batch.audit.version++;
+
+        await new Promise(resolve => setTimeout(resolve, 100));
+        return batch;
+    },
+
+    /**
+     * Submits a batch for VRCQ approval.
+     */
+    async submitForVRCQApproval(batchId: string, submittedBy: string): Promise<BatchRecord> {
+        const batch = batchStore.getById(batchId);
+        if (!batch) throw new Error(`Batch ${batchId} not found`);
+
+        batch.vrcqApproval = {
+            status: 'PENDING_APPROVAL',
+            requestedAt: new Date(),
+        };
+        batch.audit.lastModifiedAt = new Date();
+        batch.audit.lastModifiedBy = submittedBy;
+        batch.audit.version++;
+
+        await new Promise(resolve => setTimeout(resolve, 100));
+        return batch;
+    },
+
+    /**
      * Calculates the operational efficiency metrics for a given batch.
-     * 
-     * @param {BatchRecord} batch - The batch record to calculate metrics for.
-     * @returns {{yieldPercentage: number, wastePercentage: number, utilizationPercentage: number}} 
-     * An object containing standard percentage metrics (yield, waste, utilization) rounded to two decimal places.
      */
     calculateEfficiency(batch: BatchRecord): {
         yieldPercentage: number;
@@ -642,9 +716,6 @@ export const batchService = {
         const yieldPercentage = (yielded / received) * 100;
         const wastePercentage = (waste / received) * 100;
         const utilizationPercentage = ((yielded + waste + returned) / received) * 100;
-
-        // Mass Balance Concept: yielded + waste + returned = consumed
-        // Use a small epsilon to account for floating point errors
         const isMassBalanceValid = Math.abs(yielded + waste + returned - consumed) < 0.01;
 
         return {
@@ -657,9 +728,6 @@ export const batchService = {
 
     /**
      * Calculates the total percentage of recycled material in the batch composition.
-     * 
-     * @param {BatchRecord} batch - The batch record containing the material composition.
-     * @returns {number} The sum of percentages of all components classified as 'RECYCLED'.
      */
     getRecycledContentPercentage(batch: BatchRecord): number {
         const recycledPercentage = batch.composition

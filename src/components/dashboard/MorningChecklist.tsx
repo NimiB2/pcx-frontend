@@ -64,7 +64,7 @@ const MorningChecklist: React.FC = () => {
     }
 
     return (
-        <Paper sx={{ p: 0, overflow: 'hidden' }}>
+        <Paper sx={{ p: 0, overflow: 'hidden', flexShrink: 0 }}>
             <Box sx={{ p: 2, bgcolor: 'primary.main', color: 'primary.contrastText' }}>
                 <Typography variant="h6" fontWeight="bold">Morning Checklist</Typography>
                 <Typography variant="caption">Complete these tasks before starting production</Typography>

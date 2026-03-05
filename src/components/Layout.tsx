@@ -19,6 +19,7 @@ import {
     FormControlLabel,
     Chip,
     Divider,
+    Paper,
 } from '@mui/material';
 import {
     Dashboard as DashboardIcon,
@@ -28,20 +29,75 @@ import {
     Folder as DocumentIcon,
     Warning as ReconciliationIcon,
     Settings as AdminIcon,
-    Lan as MesIcon, // For connectivity
+    Lan as MesIcon,
     Menu as MenuIcon,
+    AccountTree as FlowIcon,
     People as UsersIcon,
     AccountBalance as CreditsIcon,
-    EmojiEvents as TrophyIcon
+    EmojiEvents as TrophyIcon,
+    Summarize as ReportsIcon,
+    Checklist as PunchListIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../contexts/DataContext';
+import { useMES } from '../contexts/MESContext';
 import { useTheme } from '@mui/material/styles';
+import { UserRole, getRoleDisplayName } from '../utils/permissions';
+import NotificationBell from './common/NotificationBell';
 
 const drawerWidth = 260;
 
+/**
+ * Menu item configuration for the sidebar navigation.
+ */
+interface NavItem {
+    text: string;
+    icon: React.ReactElement;
+    path: string;
+}
 
-
+/**
+ * Role-based sidebar navigation configurations.
+ * Source: User Flows §4.1-4.4
+ */
+const NAV_CONFIG: Record<UserRole, NavItem[]> = {
+    field_worker: [
+        { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
+        { text: 'Measurements', icon: <MeasurementIcon />, path: '/measurements' },
+        { text: 'Leaderboard', icon: <TrophyIcon />, path: '/leaderboard' },
+    ],
+    plant_engineer: [
+        { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
+        { text: 'Reconciliation', icon: <ReconciliationIcon />, path: '/reconciliation' },
+        { text: 'Batch Management', icon: <BatchIcon />, path: '/batches' },
+        { text: 'Mass Balance (VRCQ)', icon: <VRCQIcon />, path: '/vrcq' },
+        { text: 'Material Flow', icon: <FlowIcon />, path: '/material-flow' },
+        { text: 'Leaderboard', icon: <TrophyIcon />, path: '/leaderboard' },
+        { text: 'Credits Dashboard', icon: <CreditsIcon />, path: '/credits/dashboard' },
+        { text: 'Reports & Logs', icon: <ReportsIcon />, path: '/reports' },
+        { text: 'Documents & P.List', icon: <DocumentIcon />, path: '/documents' },
+    ],
+    super_admin: [
+        { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
+        { text: 'Reconciliation', icon: <ReconciliationIcon />, path: '/reconciliation' },
+        { text: 'Batch Management', icon: <BatchIcon />, path: '/batches' },
+        { text: 'Mass Balance (VRCQ)', icon: <VRCQIcon />, path: '/vrcq' },
+        { text: 'Material Flow', icon: <FlowIcon />, path: '/material-flow' },
+        { text: 'Leaderboard', icon: <TrophyIcon />, path: '/leaderboard' },
+        { text: 'Credits Dashboard', icon: <CreditsIcon />, path: '/credits/dashboard' },
+        { text: 'Reports & Logs', icon: <ReportsIcon />, path: '/reports' },
+        { text: 'Documents & P.List', icon: <DocumentIcon />, path: '/documents' },
+        { text: 'Codebook & Admin', icon: <AdminIcon />, path: '/codebook' },
+        { text: 'User Management', icon: <UsersIcon />, path: '/users' },
+    ],
+    regulatory: [
+        { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
+        { text: 'Reports & Audit Trail', icon: <ReportsIcon />, path: '/reports' },
+        { text: 'VRCQ Data', icon: <VRCQIcon />, path: '/vrcq' },
+        { text: 'Material Flow', icon: <FlowIcon />, path: '/material-flow' },
+        { text: 'Documents', icon: <DocumentIcon />, path: '/documents' },
+    ],
+};
 
 interface LayoutProps {
     children: React.ReactNode;
@@ -53,24 +109,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     const { user, logout } = useAuth();
     const theme = useTheme();
 
-    const menuItems = [
-        { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
-        ...(user?.role === 'operator' ? [
-            { text: 'Measurements', icon: <MeasurementIcon />, path: '/measurements' },
-            { text: 'Leaderboard', icon: <TrophyIcon />, path: '/leaderboard' },
-        ] : []),
-        ...(user?.role === 'admin' ? [
-            { text: 'Reconciliation', icon: <ReconciliationIcon />, path: '/reconciliation' },
-            { text: 'Batch Management', icon: <BatchIcon />, path: '/batches' },
-            { text: 'Mass Balance (VRCQ)', icon: <VRCQIcon />, path: '/vrcq' },
-            { text: 'Leaderboard', icon: <TrophyIcon />, path: '/leaderboard' },
-            { text: 'Credits Dashboard', icon: <CreditsIcon />, path: '/credits/dashboard' },
-            { text: 'Reports & Logs', icon: <DocumentIcon />, path: '/reports' },
-            { text: 'Documents & P.List', icon: <DocumentIcon />, path: '/documents' },
-            { text: 'Codebook & Admin', icon: <AdminIcon />, path: '/codebook' },
-            { text: 'User Management', icon: <UsersIcon />, path: '/users' },
-        ] : []),
-    ];
+    // Get menu items based on user role
+    const menuItems: NavItem[] = user?.role ? NAV_CONFIG[user.role] || [] : [];
 
     const [mobileOpen, setMobileOpen] = useState(false);
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -78,8 +118,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     // Data Context
     const { isMasked, toggleMasking } = useData();
 
-    // Mock States for UI Demo (MES still mocked locally)
-    const [mesOnline, setMesOnline] = useState(true);
+    // Global MES Status
+    const { isOnline: mesOnline, toggleMESStatus } = useMES();
 
     const handleDrawerToggle = () => {
         setMobileOpen(!mobileOpen);
@@ -107,7 +147,25 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 </Typography>
             </Toolbar>
             <Divider sx={{ borderColor: '#424242' }} />
-            <List sx={{ pt: 2 }}>
+
+            {/* Role indicator */}
+            {user && (
+                <Box sx={{ px: 2, py: 1.5 }}>
+                    <Chip
+                        label={getRoleDisplayName(user.role)}
+                        size="small"
+                        sx={{
+                            backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                            color: '#B0BEC5',
+                            fontSize: '0.7rem',
+                            fontWeight: 600,
+                            width: '100%',
+                        }}
+                    />
+                </Box>
+            )}
+
+            <List sx={{ pt: 1 }}>
                 {menuItems.map((item) => (
                     <ListItem key={item.text} disablePadding sx={{ mb: 1 }}>
                         <ListItemButton
@@ -160,6 +218,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                         edge="start"
                         onClick={handleDrawerToggle}
                         sx={{ mr: 2, display: { sm: 'none' } }}
+                        aria-label="open navigation menu"
                     >
                         <MenuIcon />
                     </IconButton>
@@ -167,36 +226,58 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                     {/* Action Header Items */}
                     <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', gap: 3 }}>
                         {/* MES Connection Status */}
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, border: '1px solid #E0E0E0', padding: '4px 12px', borderRadius: '4px' }}>
+                        <Box
+                            onClick={toggleMESStatus}
+                            sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 1,
+                                border: '1px solid #E0E0E0',
+                                padding: '4px 12px',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                '&:hover': {
+                                    backgroundColor: 'rgba(0,0,0,0.04)'
+                                }
+                            }}
+                            title="Click to toggle proxy MES connection"
+                        >
                             <MesIcon sx={{ color: mesOnline ? theme.palette.success.main : theme.palette.error.main, fontSize: 20 }} />
                             <Typography variant="body2" fontWeight="bold">
                                 MES: {mesOnline ? 'ONLINE' : 'OFFLINE'}
                             </Typography>
                         </Box>
 
-                        {/* Masking Toggle */}
-                        <Box sx={{ display: 'flex', alignItems: 'center', border: '1px solid #E0E0E0', padding: '0px 12px', borderRadius: '4px' }}>
-                            <FormControlLabel
-                                control={
-                                    <Switch
-                                        size="small"
-                                        checked={isMasked}
-                                        onChange={toggleMasking}
-                                        color="warning"
-                                    />
-                                }
-                                label={
-                                    <Typography variant="body2" fontWeight="bold" color="textSecondary">
-                                        {isMasked ? "MASKING: ON" : "MASKING: OFF"}
-                                    </Typography>
-                                }
-                            />
-                        </Box>
+                        {/* Masking Toggle — only show for roles that have codebook access */}
+                        {(user?.role === 'super_admin') && (
+                            <Box sx={{ display: 'flex', alignItems: 'center', border: '1px solid #E0E0E0', padding: '0px 12px', borderRadius: '4px' }}>
+                                <FormControlLabel
+                                    control={
+                                        <Switch
+                                            size="small"
+                                            checked={isMasked}
+                                            onChange={toggleMasking}
+                                            color="warning"
+                                        />
+                                    }
+                                    label={
+                                        <Typography variant="body2" fontWeight="bold" color="textSecondary">
+                                            {isMasked ? "MASKING: ON" : "MASKING: OFF"}
+                                        </Typography>
+                                    }
+                                />
+                            </Box>
+                        )}
+                    </Box>
+
+                    {/* Notifications */}
+                    <Box sx={{ ml: 2, mr: 1 }}>
+                        <NotificationBell />
                     </Box>
 
                     {/* User Profile */}
                     <div>
-                        <IconButton onClick={handleMenu} color="inherit">
+                        <IconButton onClick={handleMenu} color="inherit" aria-label="user menu">
                             <Avatar sx={{ width: 32, height: 32, bgcolor: theme.palette.primary.main }}>
                                 {user?.name?.charAt(0) || 'U'}
                             </Avatar>
@@ -207,11 +288,16 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                             onClose={handleClose}
                         >
                             <MenuItem disabled>
-                                <Typography variant="body2">
-                                    {user?.name || 'User'} ({user?.role || 'Guest'})
-                                </Typography>
+                                <Box>
+                                    <Typography variant="body2" fontWeight="bold">
+                                        {user?.name || 'User'}
+                                    </Typography>
+                                    <Typography variant="caption" color="text.secondary">
+                                        {user?.role ? getRoleDisplayName(user.role) : 'Guest'}
+                                    </Typography>
+                                </Box>
                             </MenuItem>
-                            <MenuItem onClick={handleClose}>Profile</MenuItem>
+                            <Divider />
                             <MenuItem onClick={handleLogout}>Logout</MenuItem>
                         </Menu>
                     </div>
@@ -255,6 +341,25 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                     minHeight: '100vh',
                 }}
             >
+                {!mesOnline && (
+                    <Paper
+                        elevation={0}
+                        sx={{
+                            p: 2,
+                            mb: 3,
+                            bgcolor: 'error.light',
+                            color: 'error.contrastText',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 2
+                        }}
+                    >
+                        <ReconciliationIcon />
+                        <Typography variant="body1" fontWeight="bold">
+                            MES Connection Unavailable: The system is operating in fallback mode. Some integration features are disabled.
+                        </Typography>
+                    </Paper>
+                )}
                 {children}
             </Box>
         </Box>

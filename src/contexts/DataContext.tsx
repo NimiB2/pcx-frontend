@@ -23,6 +23,7 @@ export interface Batch {
     currentQuantity: number;
     operator: string;
     completedDate?: Date;
+    vrcqApproval?: { status: string };
 }
 
 export interface Discrepancy {
@@ -36,10 +37,11 @@ export interface Discrepancy {
     difference?: number;
     unit?: string;
     detected: Date;
-    status: 'OPEN' | 'RESOLVED' | 'IGNORED';
+    status: 'OPEN' | 'RESOLVED' | 'IGNORED' | 'ACKNOWLEDGED';
     slaDeadline?: Date;
     resolvedAt?: Date;
     resolution?: string;
+    createdAt?: Date; // Added for sort fallback if detected absent
 }
 
 export interface Measurement {
@@ -54,6 +56,8 @@ export interface Measurement {
     operator: string;
     batchId: string;
     status: string;
+    validationStatus?: string;
+    source?: string;
 }
 
 export interface PunchListTask {
@@ -97,9 +101,14 @@ interface DataContextType {
 
     // Actions
     updateBatchStatus: (batchId: string, status: string) => void;
+    addDiscrepancy: (discrepancy: Omit<Discrepancy, 'id'>) => void;
     resolveDiscrepancy: (id: string, resolution: string) => void;
+    acknowledgeDiscrepancy: (id: string) => void;
     addMeasurement: (measurement: Omit<Measurement, 'id'>) => void;
     updateTaskStatus: (taskId: string, status: PunchListTask['status']) => void;
+    addTask: (task: Omit<PunchListTask, 'id' | 'status' | 'progress' | 'completedDate'>) => void;
+    updateTaskDetails: (taskId: string, updates: Partial<PunchListTask>) => void;
+    deleteTask: (taskId: string) => void;
 
     // Masking
     isMasked: boolean;
@@ -107,7 +116,7 @@ interface DataContextType {
     getIdentity: (code: string | undefined) => string;
 }
 
-const DataContext = createContext<DataContextType | undefined>(undefined);
+export const DataContext = createContext<DataContextType | undefined>(undefined);
 
 export const useData = () => {
     const context = useContext(DataContext);
@@ -145,6 +154,23 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         ));
     };
 
+    const acknowledgeDiscrepancy = (id: string) => {
+        setDiscrepancies(prev => prev.map(d =>
+            d.id === id ? {
+                ...d,
+                status: 'ACKNOWLEDGED'
+            } : d
+        ));
+    };
+
+    const addDiscrepancy = (discrepancy: Omit<Discrepancy, 'id'>) => {
+        const newDiscrepancy = {
+            ...discrepancy,
+            id: `DISC-${Date.now()}`
+        };
+        setDiscrepancies(prev => [newDiscrepancy, ...prev]);
+    };
+
     const addMeasurement = (measurement: Omit<Measurement, 'id'>) => {
         const newMeasurement = {
             ...measurement,
@@ -162,6 +188,34 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 completedDate: status === 'COMPLETED' ? new Date() : undefined
             } : t
         ));
+    };
+
+    const addTask = (taskInput: Omit<PunchListTask, 'id' | 'status' | 'progress' | 'completedDate'>) => {
+        const newTask: PunchListTask = {
+            ...taskInput,
+            id: `TASK-${Date.now()}`,
+            status: 'PENDING',
+            progress: 0,
+        };
+        setPunchListTasks(prev => [...prev, newTask]);
+    };
+
+    const updateTaskDetails = (taskId: string, updates: Partial<PunchListTask>) => {
+        setPunchListTasks(prev => prev.map(t =>
+            t.id === taskId ? { ...t, ...updates } : t
+        ));
+    };
+
+    const deleteTask = (taskId: string) => {
+        setPunchListTasks(prev => {
+            // Remove the task
+            const filtered = prev.filter(t => t.id !== taskId);
+            // Also remove this task from any dependencies array
+            return filtered.map(t => ({
+                ...t,
+                dependencies: t.dependencies?.filter(depId => depId !== taskId)
+            }));
+        });
     };
 
     // Mock Codebook Data
@@ -188,9 +242,14 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             creditSummary,
             monthlyCredits,
             updateBatchStatus,
+            addDiscrepancy,
             resolveDiscrepancy,
+            acknowledgeDiscrepancy,
             addMeasurement,
             updateTaskStatus,
+            addTask,
+            updateTaskDetails,
+            deleteTask,
             isMasked,
             toggleMasking,
             getIdentity

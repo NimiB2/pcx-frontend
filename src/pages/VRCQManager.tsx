@@ -1,12 +1,23 @@
-import React from 'react';
-import { Box, Paper, Typography, Grid, Divider, Button, Card, CardContent, Dialog, DialogTitle, DialogContent, DialogActions, List, ListItem, ListItemText, IconButton, Chip } from '@mui/material';
+import React, { useContext } from 'react';
+import {
+    Box, Paper, Typography, Grid, Divider, Button, Card, CardContent,
+    Dialog, DialogTitle, DialogContent, DialogActions, List, ListItem,
+    ListItemText, Chip, Table, TableBody, TableCell, TableContainer,
+    TableHead, TableRow, TextField, Alert
+} from '@mui/material';
 import { useTheme } from '@mui/material/styles';
-import { ArrowDownward, TrendingFlat, PictureAsPdf, Code } from '@mui/icons-material';
+import {
+    PictureAsPdf, Code, CheckCircle, Cancel, HourglassEmpty,
+    ThumbUp, ThumbDown, Send
+} from '@mui/icons-material';
 import ImmutableValue from '../components/common/ImmutableValue';
 import EvidenceLink from '../components/common/EvidenceLink';
 import { evidencePackageService } from '../utils/evidencePackageService';
 import { mockEvidencePackage } from '../mockData';
-import { useData } from '../contexts/DataContext';
+import { useData, DataContext } from '../contexts/DataContext';
+import { useAuth } from '../contexts/AuthContext';
+import { useNotifications } from '../contexts/NotificationContext';
+import { useAudit } from '../contexts/AuditContext';
 import StatusBadge from '../components/common/StatusBadge';
 import { calculateCreditEligibleInput } from '../utils/creditCalculations';
 import { batchService, BatchRecord } from '../services/batchService';
@@ -44,14 +55,24 @@ const MassBalanceItem: React.FC<{
  * VRCQManager Component
  * 
  * Manages the Volume of Recycled Content Quality (VRCQ) calculations.
- * It provides a mass balance visualization based on tracked inputs,
- * virgin material additions, and process losses to determine the verified net output.
+ * Includes VRCQ approval workflow with role-based actions.
  * 
  * @component
  */
 const VRCQManager: React.FC = () => {
-    const { measurements, discrepancies } = useData();
+    const { measurements, discrepancies, batches, updateBatchStatus } = useData();
+    const { user } = useAuth();
+    const { addNotification } = useNotifications();
+    const { addLog } = useAudit();
     const [batchRecords, setBatchRecords] = React.useState<BatchRecord[]>([]);
+
+    // Approval modal state
+    const [approvalModal, setApprovalModal] = React.useState<{
+        open: boolean;
+        batch: BatchRecord | null;
+        action: 'approve' | 'reject' | null;
+    }>({ open: false, batch: null, action: null });
+    const [approvalNotes, setApprovalNotes] = React.useState('');
 
     React.useEffect(() => {
         const fetchBatches = async () => {
@@ -60,6 +81,11 @@ const VRCQManager: React.FC = () => {
         };
         fetchBatches();
     }, []);
+
+    // Determine role-based capabilities
+    const canApproveReject = user?.role === 'super_admin' || user?.role === 'plant_engineer';
+    const canSubmitForApproval = user?.role === 'super_admin' || user?.role === 'plant_engineer';
+    const isReadOnly = user?.role === 'regulatory' || user?.role === 'field_worker';
 
     // Calculate aggregated credit eligibility from all completed/in-progress batches
     let totalInput = 0;
@@ -102,6 +128,76 @@ const VRCQManager: React.FC = () => {
         setShowExportModal(false);
     };
 
+    const handleApprovalAction = async () => {
+        if (!approvalModal.batch || !approvalModal.action) return;
+        const batchId = approvalModal.batch.id;
+        const reviewerName = user?.name || 'Unknown';
+        const selectedBatch = approvalModal.batch; // Alias for clarity based on diff
+
+        try {
+            if (approvalModal.action === 'approve') {
+                await batchService.approveVRCQ(batchId, approvalNotes, reviewerName);
+                addNotification({
+                    title: 'VRCQ Approved',
+                    message: `Batch ${batchId} has been approved.`,
+                    type: 'SUCCESS',
+                    link: '/vrcq'
+                });
+                addLog('VRCQ_APPROVED', `Batch ${selectedBatch.id} approved.`, user?.role || 'system');
+            } else { // reject
+                await batchService.rejectVRCQ(batchId, approvalNotes, reviewerName);
+                addNotification({
+                    title: 'VRCQ Rejected',
+                    message: `Batch ${batchId} was rejected.`,
+                    type: 'ERROR',
+                    link: '/vrcq'
+                });
+                addLog('VRCQ_REJECTED', `Batch ${selectedBatch.id} rejected. Reason: ${approvalNotes || 'No reason provided.'}`, user?.role || 'system');
+            }
+            // Refresh batches
+            const data = await batchService.getBatches();
+            setBatchRecords(data);
+        } catch (err) {
+            console.error('Approval action failed:', err);
+        }
+
+        setApprovalModal({ open: false, batch: null, action: null });
+        setApprovalNotes('');
+    };
+
+    const handleSubmitForApproval = async (batch: BatchRecord) => {
+        try {
+            await batchService.submitForVRCQApproval(batch.id, user?.name || 'Unknown');
+            const data = await batchService.getBatches();
+            setBatchRecords(data);
+        } catch (err) {
+            console.error('Submit for approval failed:', err);
+        }
+    };
+
+    const getApprovalStatusChip = (batch: BatchRecord) => {
+        if (!batch.vrcqApproval) {
+            if (batch.status === 'COMPLETED' || batch.status === 'APPROVED_OVERDUE') {
+                return <Chip label="Not Submitted" size="small" variant="outlined" />;
+            }
+            return <Chip label="N/A" size="small" variant="outlined" color="default" />;
+        }
+
+        switch (batch.vrcqApproval.status) {
+            case 'PENDING_APPROVAL':
+                return <Chip icon={<HourglassEmpty />} label="Pending Approval" size="small" color="warning" />;
+            case 'APPROVED':
+                return <Chip icon={<CheckCircle />} label="Approved" size="small" color="success" />;
+            case 'REJECTED':
+                return <Chip icon={<Cancel />} label="Rejected" size="small" color="error" />;
+        }
+    };
+
+    // Batches relevant to VRCQ approval: completed or those with active approval
+    const vrcqBatches = batchRecords.filter(b =>
+        b.status === 'COMPLETED' || b.status === 'APPROVED_OVERDUE' || b.vrcqApproval
+    );
+
     return (
         <Box>
             <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -113,6 +209,7 @@ const VRCQManager: React.FC = () => {
                 </Button>
             </Box>
 
+            {/* Export Evidence Package Dialog */}
             <Dialog open={showExportModal} onClose={() => setShowExportModal(false)} maxWidth="sm" fullWidth>
                 <DialogTitle>Export Evidence Package</DialogTitle>
                 <DialogContent dividers>
@@ -131,22 +228,10 @@ const VRCQManager: React.FC = () => {
                                     divider
                                     secondaryAction={
                                         <Box sx={{ display: 'flex', gap: 1 }}>
-                                            <Button
-                                                size="small"
-                                                variant="outlined"
-                                                color="info"
-                                                startIcon={<Code />}
-                                                onClick={() => handleExportPackage('JSON', batch.id)}
-                                            >
+                                            <Button size="small" variant="outlined" color="info" startIcon={<Code />} onClick={() => handleExportPackage('JSON', batch.id)}>
                                                 JSON
                                             </Button>
-                                            <Button
-                                                size="small"
-                                                variant="contained"
-                                                color="info"
-                                                startIcon={<PictureAsPdf />}
-                                                onClick={() => handleExportPackage('PDF', batch.id)}
-                                            >
+                                            <Button size="small" variant="contained" color="info" startIcon={<PictureAsPdf />} onClick={() => handleExportPackage('PDF', batch.id)}>
                                                 PDF
                                             </Button>
                                         </Box>
@@ -168,6 +253,160 @@ const VRCQManager: React.FC = () => {
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={() => setShowExportModal(false)}>Cancel</Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* VRCQ Approval Section */}
+            <Paper sx={{ p: 3, mb: 4 }}>
+                <Typography variant="h6" fontWeight="bold" gutterBottom>
+                    VRCQ Approval Status
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    {isReadOnly
+                        ? 'View-only access — approval actions require Plant Engineer or Super-Admin privileges.'
+                        : 'Review and approve VRCQ calculations for completed batches.'}
+                </Typography>
+
+                <TableContainer>
+                    <Table size="small">
+                        <TableHead>
+                            <TableRow>
+                                <TableCell><b>Batch ID</b></TableCell>
+                                <TableCell><b>Product</b></TableCell>
+                                <TableCell><b>Batch Status</b></TableCell>
+                                <TableCell><b>VRCQ Status</b></TableCell>
+                                <TableCell><b>Reviewed By</b></TableCell>
+                                <TableCell><b>Reviewed At</b></TableCell>
+                                {!isReadOnly && <TableCell align="center"><b>Actions</b></TableCell>}
+                            </TableRow>
+                        </TableHead>
+                        <TableBody>
+                            {vrcqBatches.length === 0 ? (
+                                <TableRow>
+                                    <TableCell colSpan={isReadOnly ? 6 : 7} align="center">
+                                        No batches ready for VRCQ approval.
+                                    </TableCell>
+                                </TableRow>
+                            ) : (
+                                vrcqBatches.map(batch => (
+                                    <TableRow key={batch.id}>
+                                        <TableCell sx={{ fontWeight: 'bold', color: 'primary.main' }}>{batch.id}</TableCell>
+                                        <TableCell>{batch.productName}</TableCell>
+                                        <TableCell>
+                                            <StatusBadge
+                                                status={batch.status === 'COMPLETED' ? 'success' : batch.status === 'APPROVED_OVERDUE' ? 'warning' : 'info'}
+                                                label={batch.status.replace(/_/g, ' ')}
+                                            />
+                                        </TableCell>
+                                        <TableCell>{getApprovalStatusChip(batch)}</TableCell>
+                                        <TableCell>{batch.vrcqApproval?.reviewedBy || '—'}</TableCell>
+                                        <TableCell>
+                                            {batch.vrcqApproval?.reviewedAt
+                                                ? new Date(batch.vrcqApproval.reviewedAt).toLocaleString()
+                                                : '—'}
+                                        </TableCell>
+                                        {!isReadOnly && (
+                                            <TableCell align="center">
+                                                <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
+                                                    {/* Submit for Approval — only if not yet submitted */}
+                                                    {!batch.vrcqApproval && canSubmitForApproval && (
+                                                        <Button
+                                                            size="small"
+                                                            variant="outlined"
+                                                            startIcon={<Send />}
+                                                            onClick={() => handleSubmitForApproval(batch)}
+                                                        >
+                                                            Submit
+                                                        </Button>
+                                                    )}
+                                                    {/* Approve / Reject — only if pending */}
+                                                    {batch.vrcqApproval?.status === 'PENDING_APPROVAL' && canApproveReject && (
+                                                        <>
+                                                            <Button
+                                                                size="small"
+                                                                variant="contained"
+                                                                color="success"
+                                                                startIcon={<ThumbUp />}
+                                                                onClick={() => {
+                                                                    setApprovalModal({ open: true, batch, action: 'approve' });
+                                                                    setApprovalNotes('');
+                                                                }}
+                                                            >
+                                                                Approve
+                                                            </Button>
+                                                            <Button
+                                                                size="small"
+                                                                variant="outlined"
+                                                                color="error"
+                                                                startIcon={<ThumbDown />}
+                                                                onClick={() => {
+                                                                    setApprovalModal({ open: true, batch, action: 'reject' });
+                                                                    setApprovalNotes('');
+                                                                }}
+                                                            >
+                                                                Reject
+                                                            </Button>
+                                                        </>
+                                                    )}
+                                                    {/* Resubmit after rejection */}
+                                                    {batch.vrcqApproval?.status === 'REJECTED' && canSubmitForApproval && (
+                                                        <Button
+                                                            size="small"
+                                                            variant="outlined"
+                                                            color="warning"
+                                                            startIcon={<Send />}
+                                                            onClick={() => handleSubmitForApproval(batch)}
+                                                        >
+                                                            Resubmit
+                                                        </Button>
+                                                    )}
+                                                    {batch.vrcqApproval?.status === 'APPROVED' && (
+                                                        <Chip label="No Action Needed" size="small" variant="outlined" color="success" />
+                                                    )}
+                                                </Box>
+                                            </TableCell>
+                                        )}
+                                    </TableRow>
+                                ))
+                            )}
+                        </TableBody>
+                    </Table>
+                </TableContainer>
+            </Paper>
+
+            {/* Approval Confirmation Dialog */}
+            <Dialog open={approvalModal.open} onClose={() => setApprovalModal({ open: false, batch: null, action: null })} maxWidth="sm" fullWidth>
+                <DialogTitle sx={{ color: approvalModal.action === 'approve' ? 'success.main' : 'error.main' }}>
+                    {approvalModal.action === 'approve' ? '✓ Approve VRCQ' : '✗ Reject VRCQ'}
+                </DialogTitle>
+                <DialogContent dividers>
+                    {approvalModal.batch && (
+                        <Alert severity="info" sx={{ mb: 2 }}>
+                            <strong>{approvalModal.batch.id}</strong> — {approvalModal.batch.productName}
+                        </Alert>
+                    )}
+                    <TextField
+                        fullWidth
+                        multiline
+                        rows={3}
+                        label={approvalModal.action === 'approve' ? 'Approval Notes (optional)' : 'Rejection Reason (required)'}
+                        value={approvalNotes}
+                        onChange={(e) => setApprovalNotes(e.target.value)}
+                        required={approvalModal.action === 'reject'}
+                    />
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setApprovalModal({ open: false, batch: null, action: null })}>
+                        Cancel
+                    </Button>
+                    <Button
+                        variant="contained"
+                        color={approvalModal.action === 'approve' ? 'success' : 'error'}
+                        onClick={handleApprovalAction}
+                        disabled={approvalModal.action === 'reject' && !approvalNotes.trim()}
+                    >
+                        {approvalModal.action === 'approve' ? 'Confirm Approval' : 'Confirm Rejection'}
+                    </Button>
                 </DialogActions>
             </Dialog>
 

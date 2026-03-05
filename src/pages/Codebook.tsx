@@ -14,41 +14,96 @@ import {
     TextField,
     InputAdornment,
     Switch,
-    FormControlLabel
+    FormControlLabel,
+    IconButton,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
+    MenuItem
 } from '@mui/material';
 import {
     Search,
     Add,
     Security,
     Visibility,
-    VisibilityOff
+    VisibilityOff,
+    Edit as EditIcon,
+    Delete as DeleteIcon
 } from '@mui/icons-material';
 import { mockCodebook } from '../mockData';
 import { useAuth } from '../contexts/AuthContext';
 
-/**
- * Codebook Component
- * 
- * Provides an administrative interface for managing confidential identity mappings.
- * It allows admins to view and toggle the visibility of real identities (e.g., Suppliers, Customers)
- * behind privacy codes used throughout the system.
- * 
- * @component
- */
+export interface CodebookEntry {
+    code: string;
+    realIdentity: string;
+    type: string;
+    status: 'ACTIVE' | 'INACTIVE';
+}
+
 const Codebook: React.FC = () => {
-    // In a real app, useData() would provide codebook actions
-    // For now, we read from mock data
+    const { user } = useAuth();
+
+    const [codes, setCodes] = useState<CodebookEntry[]>(mockCodebook as CodebookEntry[]);
     const [searchTerm, setSearchTerm] = useState('');
     const [showRealIdentities, setShowRealIdentities] = useState(false);
 
-    const codebookData = mockCodebook.filter(entry =>
+    // Modal State
+    const [isModalOpen, setModalOpen] = useState(false);
+    const [editingCode, setEditingCode] = useState<CodebookEntry | null>(null);
+    const [formData, setFormData] = useState<CodebookEntry>({
+        code: '',
+        realIdentity: '',
+        type: 'SUPPLIER',
+        status: 'ACTIVE'
+    });
+
+    const filteredCodes = codes.filter(entry =>
         entry.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (showRealIdentities && entry.realIdentity.toLowerCase().includes(searchTerm.toLowerCase()))
     );
 
-    const { user } = useAuth();
-    // Double check admin rights, though router should handle this
-    if (user?.role !== 'admin') {
+    const handleOpenModal = (code?: CodebookEntry) => {
+        if (code) {
+            setEditingCode(code);
+            setFormData(code);
+        } else {
+            setEditingCode(null);
+            setFormData({
+                code: '',
+                realIdentity: '',
+                type: 'SUPPLIER',
+                status: 'ACTIVE'
+            });
+        }
+        setModalOpen(true);
+    };
+
+    const handleCloseModal = () => {
+        setModalOpen(false);
+    };
+
+    const handleSave = () => {
+        if (editingCode) {
+            setCodes(codes.map(c => c.code === editingCode.code ? formData : c));
+        } else {
+            // Ensure unique code
+            if (codes.some(c => c.code === formData.code)) {
+                alert("Code must be unique!");
+                return;
+            }
+            setCodes([...codes, formData]);
+        }
+        setModalOpen(false);
+    };
+
+    const handleDelete = (code: string) => {
+        if (window.confirm(`Are you sure you want to delete ${code}? This may affect historical data visibility.`)) {
+            setCodes(codes.filter(c => c.code !== code));
+        }
+    };
+
+    if (user?.role !== 'super_admin') {
         return <Typography color="error">Access Denied. Admins only.</Typography>;
     }
 
@@ -66,6 +121,7 @@ const Codebook: React.FC = () => {
                 <Button
                     variant="contained"
                     startIcon={<Add />}
+                    onClick={() => handleOpenModal()}
                 >
                     New Code Entry
                 </Button>
@@ -79,8 +135,10 @@ const Codebook: React.FC = () => {
                         size="small"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        InputProps={{
-                            startAdornment: <InputAdornment position="start"><Search /></InputAdornment>,
+                        slotProps={{
+                            input: {
+                                startAdornment: <InputAdornment position="start"><Search /></InputAdornment>,
+                            }
                         }}
                         sx={{ width: 300 }}
                     />
@@ -130,15 +188,15 @@ const Codebook: React.FC = () => {
                         </TableRow>
                     </TableHead>
                     <TableBody>
-                        {codebookData.map((row) => (
-                            <TableRow key={row.code}>
+                        {filteredCodes.map((row) => (
+                            <TableRow key={row.code} hover>
                                 <TableCell>
                                     <Chip
                                         label={row.code}
                                         sx={{ fontWeight: 'bold', fontFamily: 'monospace' }}
                                     />
                                 </TableCell>
-                                <TableCell>{row.type}</TableCell>
+                                <TableCell>{row.type.replace('_', ' ')}</TableCell>
                                 <TableCell>
                                     {showRealIdentities ? (
                                         <Typography fontWeight="bold">{row.realIdentity}</Typography>
@@ -157,13 +215,79 @@ const Codebook: React.FC = () => {
                                     />
                                 </TableCell>
                                 <TableCell align="right">
-                                    <Button size="small">Edit</Button>
+                                    <IconButton size="small" color="primary" onClick={() => handleOpenModal(row)}>
+                                        <EditIcon fontSize="small" />
+                                    </IconButton>
+                                    <IconButton size="small" color="error" onClick={() => handleDelete(row.code)}>
+                                        <DeleteIcon fontSize="small" />
+                                    </IconButton>
                                 </TableCell>
                             </TableRow>
                         ))}
+                        {filteredCodes.length === 0 && (
+                            <TableRow>
+                                <TableCell colSpan={5} align="center">No codes found.</TableCell>
+                            </TableRow>
+                        )}
                     </TableBody>
                 </Table>
             </TableContainer>
+
+            {/* Create/Edit Modal */}
+            <Dialog open={isModalOpen} onClose={handleCloseModal} maxWidth="sm" fullWidth>
+                <DialogTitle>{editingCode ? 'Edit Code Entry' : 'New Code Entry'}</DialogTitle>
+                <DialogContent dividers>
+                    <Box sx={{ display: 'grid', gap: 2 }}>
+                        <TextField
+                            label="Privacy Code"
+                            fullWidth
+                            value={formData.code}
+                            onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
+                            disabled={!!editingCode} /* Disallow changing code ID once created for simplicity */
+                            helperText={editingCode ? "Privacy code cannot be changed after creation." : "E.g., SUP-A, MAT-001"}
+                        />
+                        <TextField
+                            label="Real Identity"
+                            fullWidth
+                            value={formData.realIdentity}
+                            onChange={(e) => setFormData({ ...formData, realIdentity: e.target.value })}
+                            helperText="The actual name of the supplier, customer, or material."
+                        />
+                        <TextField
+                            select
+                            label="Entity Type"
+                            fullWidth
+                            value={formData.type}
+                            onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                        >
+                            <MenuItem value="SUPPLIER">Supplier</MenuItem>
+                            <MenuItem value="CUSTOMER">Customer</MenuItem>
+                            <MenuItem value="MATERIAL_TYPE">Material Type</MenuItem>
+                        </TextField>
+                        <TextField
+                            select
+                            label="Status"
+                            fullWidth
+                            value={formData.status}
+                            onChange={(e) => setFormData({ ...formData, status: e.target.value as 'ACTIVE' | 'INACTIVE' })}
+                        >
+                            <MenuItem value="ACTIVE">Active</MenuItem>
+                            <MenuItem value="INACTIVE">Inactive</MenuItem>
+                        </TextField>
+                    </Box>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={handleCloseModal}>Cancel</Button>
+                    <Button
+                        variant="contained"
+                        color="primary"
+                        onClick={handleSave}
+                        disabled={!formData.code || !formData.realIdentity}
+                    >
+                        {editingCode ? 'Save Changes' : 'Create Entry'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </Box>
     );
 };

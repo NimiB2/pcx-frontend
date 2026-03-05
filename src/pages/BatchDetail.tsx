@@ -286,14 +286,14 @@ const BatchDetail: React.FC = () => {
                     severity="error"
                     sx={{ mb: 3 }}
                     action={
-                        user?.role === 'admin' && (
+                        (user?.role === 'super_admin' || user?.role === 'plant_engineer') && (
                             <Button color="inherit" size="small" onClick={() => setShowApprovalDialog(true)}>
                                 Approve Delay
                             </Button>
                         )
                     }
                 >
-                    <strong>Overdue Approval Required:</strong> This batch has been open for {batchService.getBatchDaysOpen(batch)} days without closure. {user?.role !== 'admin' && 'Supervisor approval required before continuing.'}
+                    <strong>Overdue Approval Required:</strong> This batch has been open for {batchService.getBatchDaysOpen(batch)} days without closure. {(user?.role !== 'super_admin' && user?.role !== 'plant_engineer') && 'Supervisor approval required before continuing.'}
                 </Alert>
             )}
 
@@ -825,7 +825,7 @@ const BatchDetail: React.FC = () => {
                     </Paper>
 
                     {/* Evidence Package Section */}
-                    {(user?.role === 'supervisor' || user?.role === 'auditor') && (
+                    {(user?.role === 'plant_engineer' || user?.role === 'super_admin' || user?.role === 'regulatory') && (
                         <Paper sx={{ p: 3, mb: 3 }}>
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                                 <Typography variant="h6" fontWeight="bold">

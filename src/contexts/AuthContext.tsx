@@ -1,6 +1,8 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import { UserRole, hasPermission as checkPermission, isReadOnly as checkReadOnly, getRoleDisplayName } from '../utils/permissions';
 
-export type UserRole = 'admin' | 'operator' | 'supervisor' | 'auditor';
+// Re-export UserRole so consumers don't need an extra import
+export type { UserRole } from '../utils/permissions';
 
 export interface User {
     id: string;
@@ -14,6 +16,10 @@ interface AuthContextType {
     login: (role: UserRole) => void;
     logout: () => void;
     isAuthenticated: boolean;
+    /** Check if the current user has a specific permission */
+    hasPermission: (permission: string) => boolean;
+    /** Check if the current user has read-only access (Regulatory role) */
+    isReadOnly: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -30,34 +36,66 @@ interface AuthProviderProps {
     children: ReactNode;
 }
 
+/**
+ * Mock user profiles per role.
+ * Source: PRD §3 Personas, User Flows §2.1
+ */
+const MOCK_USERS: Record<UserRole, User> = {
+    field_worker: {
+        id: 'fw-1',
+        name: 'John Operator',
+        role: 'field_worker',
+        email: 'john@aterum.com',
+    },
+    plant_engineer: {
+        id: 'pe-1',
+        name: 'Sarah Engineer',
+        role: 'plant_engineer',
+        email: 'sarah@aterum.com',
+    },
+    super_admin: {
+        id: 'sa-1',
+        name: 'Admin Manager',
+        role: 'super_admin',
+        email: 'admin@aterum.com',
+    },
+    regulatory: {
+        id: 'reg-1',
+        name: 'Alex Auditor',
+        role: 'regulatory',
+        email: 'auditor@regulatory.org',
+    },
+};
+
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const [user, setUser] = useState<User | null>(null);
 
-    const login = (role: UserRole) => {
-        // Simulate login based on selected role
-        if (role === 'admin') {
-            setUser({
-                id: 'admin-1',
-                name: 'Sarah Supervisor',
-                role: 'admin',
-                email: 'sarah@aterum.com'
-            });
-        } else {
-            setUser({
-                id: 'op-1',
-                name: 'John Operator',
-                role: 'operator',
-                email: 'john@aterum.com'
-            });
-        }
-    };
+    const login = useCallback((role: UserRole) => {
+        setUser(MOCK_USERS[role]);
+    }, []);
 
-    const logout = () => {
+    const logout = useCallback(() => {
         setUser(null);
-    };
+    }, []);
+
+    const hasPermissionFn = useCallback(
+        (permission: string) => checkPermission(user?.role, permission as any),
+        [user?.role]
+    );
+
+    const isReadOnly = user ? checkReadOnly(user.role) : false;
 
     return (
-        <AuthContext.Provider value={{ user, login, logout, isAuthenticated: !!user }}>
+        <AuthContext.Provider
+            value={{
+                user,
+                login,
+                logout,
+                isAuthenticated: !!user,
+                hasPermission: hasPermissionFn,
+                isReadOnly,
+            }}
+        >
             {children}
         </AuthContext.Provider>
     );

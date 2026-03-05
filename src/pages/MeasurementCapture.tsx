@@ -26,6 +26,7 @@ import {
     AccordionSummary,
     AccordionDetails,
 } from '@mui/material';
+import { styled } from '@mui/material/styles';
 import {
     Save,
     PhotoCamera,
@@ -40,6 +41,7 @@ import {
     ExpandMore,
     Edit,
     Check,
+    Schedule,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { measurementService, CreateMeasurementInput } from '../services/measurementService';
@@ -47,6 +49,7 @@ import { mockBatches } from '../mockData';
 import { STATIONS_GPS } from '../utils/stationCoordinates';
 import { gpsService, GPSTag } from '../utils/gpsService';
 import { LocationOn, LocationOff } from '@mui/icons-material';
+import { useMES } from '../contexts/MESContext';
 
 // --- Types & Constants ---
 
@@ -107,12 +110,13 @@ const MeasurementCapture: React.FC = () => {
     const [gpsLoading, setGpsLoading] = useState(false);
     const [gpsError, setGpsError] = useState<string | null>(null);
 
-    // Batch
     const [batchId, setBatchId] = useState('');
-    // const [batchStatus, setBatchStatus] = useState<string | null>(null); // Removed, now derived from activeBatch
+
+    // Global MES Context
+    const { isOnline: mesOnline } = useMES();
 
     // Measurement Data
-    const [source, setSource] = useState<'MES' | 'SCALE' | 'MANUAL'>('SCALE');
+    const [source, setSource] = useState<'MES' | 'SCALE' | 'MANUAL'>(mesOnline ? 'MES' : 'SCALE');
     // Standard Single Entry
     const [singleValue, setSingleValue] = useState('');
     const [singleMaterialClass, setSingleMaterialClass] = useState<MaterialClass>('RECYCLED');
@@ -130,6 +134,15 @@ const MeasurementCapture: React.FC = () => {
     // Evidence
     const [evidenceAttached, setEvidenceAttached] = useState(false);
     const [showCamera, setShowCamera] = useState(false);
+
+    // Historical Entry
+    const [isHistorical, setIsHistorical] = useState(false);
+    const [historicalDate, setHistoricalDate] = useState(() => {
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        return yesterday.toISOString().slice(0, 16); // datetime-local format
+    });
+    const [historicalJustification, setHistoricalJustification] = useState('');
 
     // UI Feedback
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -157,6 +170,13 @@ const MeasurementCapture: React.FC = () => {
             clearInterval(timer);
         };
     }, []);
+
+    // Fallback if MES goes offline while source is MES
+    useEffect(() => {
+        if (!mesOnline && source === 'MES') {
+            setSource('SCALE');
+        }
+    }, [mesOnline, source]);
 
     // Update batch status when selected - REMOVED, now derived from activeBatch
     // useEffect(() => {
@@ -191,7 +211,8 @@ const MeasurementCapture: React.FC = () => {
 
     const validateSetup = () => {
         if (!processStep) return false;
-        if (isMixing && !batchId) return false; // Mixing usually implies a batch
+        if (isMixing && !batchId) return false;
+        if (isHistorical && !historicalJustification.trim()) return false;
         return true;
     };
 
@@ -242,6 +263,9 @@ const MeasurementCapture: React.FC = () => {
                 } : undefined,
                 notes: notes || undefined,
                 entryJustification: justification || undefined,
+                isHistorical: isHistorical || undefined,
+                historicalDate: isHistorical ? new Date(historicalDate) : undefined,
+                historicalJustification: isHistorical ? historicalJustification : undefined,
             };
 
             if (isMixing) {
@@ -327,6 +351,23 @@ const MeasurementCapture: React.FC = () => {
                 </Box>
             </Paper>
 
+            {/* Historical Entry Banner */}
+            {isHistorical && (
+                <Alert
+                    severity="warning"
+                    icon={<History />}
+                    sx={{
+                        mb: 2,
+                        border: '2px solid',
+                        borderColor: 'warning.main',
+                        bgcolor: 'warning.light',
+                        '& .MuiAlert-message': { fontWeight: 'bold' },
+                    }}
+                >
+                    HISTORICAL ENTRY MODE — This measurement will be recorded as a backdated entry and flagged for review.
+                </Alert>
+            )}
+
             {/* STAGE 1: SETUP (Context & Batch) */}
             <Accordion
                 expanded={activeStage === 'SETUP'}
@@ -405,6 +446,52 @@ const MeasurementCapture: React.FC = () => {
 
                         <Divider />
 
+                        {/* Historical Entry Toggle */}
+                        <Box>
+                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <Schedule color={isHistorical ? 'warning' : 'disabled'} />
+                                    <Typography variant="subtitle2">Historical Entry</Typography>
+                                </Box>
+                                <Button
+                                    variant={isHistorical ? 'contained' : 'outlined'}
+                                    color={isHistorical ? 'warning' : 'inherit'}
+                                    size="small"
+                                    onClick={() => setIsHistorical(!isHistorical)}
+                                    startIcon={<History />}
+                                >
+                                    {isHistorical ? 'ON' : 'OFF'}
+                                </Button>
+                            </Box>
+                            {isHistorical && (
+                                <Box sx={{ mt: 2, p: 2, bgcolor: 'warning.50', border: '1px solid', borderColor: 'warning.light', borderRadius: 1 }}>
+                                    <TextField
+                                        fullWidth
+                                        type="datetime-local"
+                                        label="Original Measurement Date & Time"
+                                        value={historicalDate}
+                                        onChange={(e) => setHistoricalDate(e.target.value)}
+                                        InputLabelProps={{ shrink: true }}
+                                        size="small"
+                                        sx={{ mb: 2 }}
+                                    />
+                                    <TextField
+                                        fullWidth
+                                        multiline
+                                        rows={2}
+                                        label="Justification for Historical Entry"
+                                        value={historicalJustification}
+                                        onChange={(e) => setHistoricalJustification(e.target.value)}
+                                        helperText="Required — explain why this entry is being recorded after the fact"
+                                        error={isHistorical && !historicalJustification.trim()}
+                                        size="small"
+                                    />
+                                </Box>
+                            )}
+                        </Box>
+
+                        <Divider />
+
                         <Box>
                             <Typography variant="subtitle2" gutterBottom>Location Verification</Typography>
                             {gpsLoading ? (
@@ -476,7 +563,9 @@ const MeasurementCapture: React.FC = () => {
                             fullWidth
                             size="small"
                         >
-                            <ToggleButton value="MES">MES (Auto)</ToggleButton>
+                            <ToggleButton value="MES" disabled={!mesOnline}>
+                                {mesOnline ? 'MES (Auto)' : 'MES (OFFLINE)'}
+                            </ToggleButton>
                             <ToggleButton value="SCALE">Scale</ToggleButton>
                             <ToggleButton value="MANUAL">Manual</ToggleButton>
                         </ToggleButtonGroup>

@@ -257,7 +257,7 @@ export const mockPunchListTasks = [
         status: 'IN_PROGRESS',
         assignedTo: 'Supervisor Team',
         dueDate: new Date('2026-03-31'),
-        dependencies: [],
+        dependencies: ['TASK-002'],
         progress: 60,
     },
     {

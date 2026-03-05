@@ -21,7 +21,8 @@ import {
     Cancel as RejectIcon,
     Flag as FlagIcon,
     History as HistoryIcon,
-    Edit as EditIcon
+    Edit as EditIcon,
+    Visibility as VisibilityIcon
 } from '@mui/icons-material';
 import { Snackbar } from '@mui/material';
 import ImmutableValue from '../components/common/ImmutableValue';
@@ -29,16 +30,21 @@ import OriginIcon from '../components/common/OriginIcon';
 import StatusBadge from '../components/common/StatusBadge';
 import EvidenceLink from '../components/common/EvidenceLink';
 import SupersedeModal from '../components/modals/SupersedeModal';
-
-import { useData } from '../contexts/DataContext';
-
-const ExampleofNotification = () => {
-    alert("Notification sent to manager");
-}
+import SLACountdown from '../components/common/SLACountdown';
+import MESStatusWidget from '../components/common/MESStatusWidget';
+import { useNotifications } from '../contexts/NotificationContext';
+import { useData, Discrepancy } from '../contexts/DataContext';
+import { useAuth } from '../contexts/AuthContext';
+import { useMES } from '../contexts/MESContext';
+import { useAudit } from '../contexts/AuditContext';
 
 const Reconciliation: React.FC = () => {
     const theme = useTheme();
-    const { discrepancies, resolveDiscrepancy } = useData();
+    const { discrepancies, resolveDiscrepancy, acknowledgeDiscrepancy, addDiscrepancy } = useData();
+    const { user } = useAuth();
+    const { isOnline: mesOnline } = useMES();
+    const { addLog } = useAudit();
+    const { addNotification } = useNotifications();
     const [supersedeModalOpen, setSupersedeModalOpen] = useState(false);
     const [selectedDiscrepancy, setSelectedDiscrepancy] = useState<any>(null);
     const [snackbar, setSnackbar] = useState({ open: false, message: '' });
@@ -85,17 +91,70 @@ const Reconciliation: React.FC = () => {
 
     const handleConfirmSupersede = (newValue: number, reason: string) => {
         if (selectedDiscrepancy) {
-            // In a real app, this would call an API to create a new measurement record
-            // linking to the old one as 'supersededBy'
             resolveDiscrepancy(selectedDiscrepancy.id, `Superseded: ${reason} (New Value: ${newValue})`);
+            addNotification({
+                title: 'Discrepancy Superseded',
+                message: `Record ${selectedDiscrepancy.id} superseded with new value ${newValue}.`,
+                type: 'SUCCESS'
+            });
+            addLog('DISCREPANCY_RESOLVED', `Superseded discrepancy ${selectedDiscrepancy.id} with new value ${newValue} (Reason: ${reason})`, user?.role || 'system');
             setSnackbar({ open: true, message: `Record superseded successfully. New value: ${newValue}` });
         }
         setSupersedeModalOpen(false); // Close modal after confirm
     };
 
+    const handleAcknowledge = (row: any) => {
+        acknowledgeDiscrepancy(row.id);
+        const discrepancy = discrepancies.find(d => d.id === row.id);
+        addLog('DISCREPANCY_ACKNOWLEDGED', `Acknowledged discrepancy ${row.id} (${discrepancy?.type})`, user?.role || 'system');
+        addNotification({
+            title: 'Issue Acknowledged',
+            message: `Discrepancy ${row.id} has been acknowledged.`,
+            type: 'INFO'
+        });
+        setSnackbar({ open: true, message: 'Discrepancy acknowledged.' });
+    };
+
+    const handleFlagForSupervisor = (row: any) => {
+        addNotification({
+            title: 'Discrepancy Flagged',
+            message: `Discrepancy ${row.id} has been flagged for supervisor review.`,
+            type: 'WARNING'
+        });
+        setSnackbar({ open: true, message: 'Notification sent to manager' });
+    };
+
     const handleExport = () => {
         setSnackbar({ open: true, message: 'Downloading Production Reconciliation Report...' });
         // Mock download
+    };
+
+    const handleRunNightlyCheck = () => {
+        setSnackbar({ open: true, message: 'Running discrepancy detection...' });
+
+        // Simulate finding a new discrepancy
+        setTimeout(() => {
+            const newDisc: Omit<Discrepancy, 'id'> = {
+                type: 'MASS_BALANCE',
+                severity: 'MEDIUM',
+                description: 'Nightly scan: Unexplained variance between Extruder A and B',
+                batchId: 'BATCH-2026-003',
+                expectedValue: 800,
+                actualValue: 750,
+                difference: -50,
+                unit: 'kg',
+                detected: new Date(),
+                status: 'OPEN',
+                slaDeadline: new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours SLA
+            };
+            addDiscrepancy(newDisc);
+            addNotification({
+                title: 'New Discrepancy Detected',
+                message: 'Nightly check found a mass balance variance in BATCH-2026-003.',
+                type: 'WARNING'
+            });
+            setSnackbar({ open: true, message: 'Scan complete. New issues found.' });
+        }, 1500);
     };
 
     return (
@@ -106,8 +165,20 @@ const Reconciliation: React.FC = () => {
                 </Typography>
                 <Box>
                     <Button variant="outlined" sx={{ mr: 1 }} onClick={handleExport}>Export Report</Button>
-                    <Button variant="contained" color="primary">Run Nightly Check</Button>
+                    <Button
+                        variant="contained"
+                        color="primary"
+                        onClick={handleRunNightlyCheck}
+                        disabled={!mesOnline}
+                        title={!mesOnline ? "MES Offline: Cannot run sync" : ""}
+                    >
+                        Run Nightly Sync
+                    </Button>
                 </Box>
+            </Box>
+
+            <Box sx={{ mb: 4 }}>
+                <MESStatusWidget lastSync={new Date()} />
             </Box>
 
             <TableContainer component={Paper} sx={{ borderRadius: 0, border: '1px solid #e0e0e0' }}>
@@ -125,6 +196,7 @@ const Reconciliation: React.FC = () => {
                             <TableCell align="center" sx={{ borderLeft: '2px solid #ccc', bgcolor: '#fafafa' }}>
                                 Variance (%)
                             </TableCell>
+                            <TableCell align="center">SLA Countdown</TableCell>
                             <TableCell align="center">Status</TableCell>
                             <TableCell align="right">Actions</TableCell>
                         </TableRow>
@@ -196,12 +268,16 @@ const Reconciliation: React.FC = () => {
                                 </TableCell>
 
                                 <TableCell align="center">
+                                    <SLACountdown deadline={row.original.slaDeadline} resolvedAt={row.original.resolvedAt} status={row.status} />
+                                </TableCell>
+
+                                <TableCell align="center">
                                     {row.original.type === 'CREDITS_AT_RISK' ? (
                                         <Chip label="CREDITS AT RISK" color="error" variant="outlined" size="small" sx={{ fontWeight: 'bold' }} />
                                     ) : (
                                         <StatusBadge
-                                            status={row.status === 'RESOLVED' ? 'success' : Math.abs(row.variance) > 5 ? 'error' : 'warning'}
-                                            label={row.status === 'RESOLVED' ? 'RESOLVED' : 'OPEN'}
+                                            status={row.status === 'RESOLVED' ? 'success' : row.status === 'ACKNOWLEDGED' ? 'info' : Math.abs(row.variance) > 5 ? 'error' : 'warning'}
+                                            label={row.status}
                                         />
                                     )}
                                 </TableCell>
@@ -220,6 +296,18 @@ const Reconciliation: React.FC = () => {
                                                 </IconButton>
                                             </span>
                                         </Tooltip>
+                                        <Tooltip title="Acknowledge Issue">
+                                            <span>
+                                                <IconButton
+                                                    size="small"
+                                                    color="info"
+                                                    disabled={row.status === 'RESOLVED' || row.status === 'ACKNOWLEDGED'}
+                                                    onClick={() => handleAcknowledge(row)}
+                                                >
+                                                    <VisibilityIcon fontSize="small" />
+                                                </IconButton>
+                                            </span>
+                                        </Tooltip>
                                         <Tooltip title="Accept Manual as Truth">
                                             <span>
                                                 <IconButton
@@ -232,12 +320,12 @@ const Reconciliation: React.FC = () => {
                                                 </IconButton>
                                             </span>
                                         </Tooltip>
-                                        <Tooltip title="Accept MES as Truth">
+                                        <Tooltip title={!mesOnline ? "Offline: MES Data Unavailable" : "Accept MES as Truth"}>
                                             <span>
                                                 <IconButton
                                                     size="small"
                                                     color="secondary"
-                                                    disabled={row.status === 'RESOLVED'}
+                                                    disabled={row.status === 'RESOLVED' || !mesOnline}
                                                     onClick={() => resolveDiscrepancy(row.id, 'MES Accepted')}
                                                 >
                                                     <HistoryIcon fontSize="small" />
@@ -250,7 +338,7 @@ const Reconciliation: React.FC = () => {
                                                     size="small"
                                                     color="error"
                                                     disabled={row.status === 'RESOLVED'}
-                                                    onClick={() => ExampleofNotification()}
+                                                    onClick={() => handleFlagForSupervisor(row)}
                                                 >
                                                     <FlagIcon fontSize="small" />
                                                 </IconButton>

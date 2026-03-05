@@ -213,7 +213,7 @@ const OperatorDashboard: React.FC = () => {
                 {/* Right Column: Shift Notes & Checklist */}
                 <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', gap: 3 }}>
                     {personalEntry && (
-                        <Card sx={{ bgcolor: '#fff8e1', border: '1px solid #ffe082' }}>
+                        <Card sx={{ bgcolor: '#fff8e1', border: '1px solid #ffe082', flexShrink: 0 }}>
                             <CardContent>
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -232,11 +232,11 @@ const OperatorDashboard: React.FC = () => {
                                     </Box>
                                     <LinearProgress
                                         variant="determinate"
-                                        value={75} // Mock progress towards next rank
+                                        value={personalEntry.rank === 1 ? 100 : 75} // Mock progress towards next rank
                                         sx={{ height: 6, borderRadius: 3, bgcolor: 'rgba(0,0,0,0.05)', '& .MuiLinearProgress-bar': { bgcolor: '#FFCA28' } }}
                                     />
                                     <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5, textAlign: 'right' }}>
-                                        25 pts to rank #{Math.max(1, personalEntry.rank - 1)}
+                                        {personalEntry.rank === 1 ? 'You are #1!' : `25 pts to rank #${personalEntry.rank - 1}`}
                                     </Typography>
                                 </Box>
 

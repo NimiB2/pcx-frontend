@@ -24,6 +24,9 @@ export interface MeasurementRecord {
     validationStatus: 'PENDING' | 'VALIDATED' | 'FLAGGED';
     gpsTag?: GPSTag;
     reliabilityScore: 'HIGHEST' | 'HIGH' | 'MEDIUM' | 'LOWEST';
+    isHistorical?: boolean;
+    historicalDate?: Date;
+    historicalJustification?: string;
     metadata: {
         entryJustification?: string;
         supersedes?: string | null;
@@ -54,6 +57,7 @@ export interface MeasurementFilter {
     startDate?: Date;
     endDate?: Date;
     validationStatus?: string;
+    isHistorical?: boolean;
 }
 
 export interface CreateMeasurementInput {
@@ -71,6 +75,9 @@ export interface CreateMeasurementInput {
     gpsTag?: GPSTag;
     notes?: string;
     entryJustification?: string;
+    isHistorical?: boolean;
+    historicalDate?: Date;
+    historicalJustification?: string;
 }
 
 export function calculateReliabilityScore(
@@ -224,10 +231,15 @@ class MeasurementStore {
 
         const reliabilityScore = calculateReliabilityScore(input.source, input.gpsTag);
 
+        // Historical entries get a reduced reliability and automatic flag
+        if (input.isHistorical) {
+            metadataFlags.push('HISTORICAL_ENTRY');
+        }
+
         const measurement: MeasurementRecord = {
             id: this.generateId(),
             source: input.source,
-            timestamp: now,
+            timestamp: input.isHistorical && input.historicalDate ? input.historicalDate : now,
             recordedAt: now,
             location: {
                 stationId: input.stationId,
@@ -242,9 +254,12 @@ class MeasurementStore {
             materialClassification: input.materialClassification,
             materialTypeCode: input.materialTypeCode,
             evidenceLinks: [],
-            validationStatus: input.source === 'MANUAL' ? 'PENDING' : 'VALIDATED',
+            validationStatus: input.source === 'MANUAL' || input.isHistorical ? 'PENDING' : 'VALIDATED',
             gpsTag: input.gpsTag,
-            reliabilityScore,
+            reliabilityScore: input.isHistorical ? 'LOWEST' : reliabilityScore,
+            isHistorical: input.isHistorical || false,
+            historicalDate: input.historicalDate,
+            historicalJustification: input.historicalJustification,
             metadata: {
                 notes: notes,
                 entryJustification: input.entryJustification,
@@ -291,6 +306,9 @@ class MeasurementStore {
             }
             if (filter.endDate) {
                 results = results.filter(m => m.timestamp <= filter.endDate!);
+            }
+            if (filter.isHistorical !== undefined) {
+                results = results.filter(m => !!m.isHistorical === filter.isHistorical);
             }
         }
 

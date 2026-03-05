@@ -18,7 +18,7 @@ import {
     InputLabel,
     IconButton,
 } from '@mui/material';
-import { Add, Visibility, CheckCircle, Warning, Error as ErrorIcon } from '@mui/icons-material';
+import { Add, Visibility, CheckCircle, Warning, Error as ErrorIcon, History } from '@mui/icons-material';
 import { Link } from 'react-router-dom';
 import { measurementService, MeasurementRecord } from '../services/measurementService';
 
@@ -37,6 +37,7 @@ const Measurements: React.FC = () => {
     const [statusFilter, setStatusFilter] = useState('all');
     const [sourceFilter, setSourceFilter] = useState('all');
     const [searchQuery, setSearchQuery] = useState('');
+    const [historicalFilter, setHistoricalFilter] = useState('all');
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -45,7 +46,7 @@ const Measurements: React.FC = () => {
 
     useEffect(() => {
         applyFilters();
-    }, [measurements, statusFilter, sourceFilter, searchQuery]);
+    }, [measurements, statusFilter, sourceFilter, searchQuery, historicalFilter]);
 
     const loadMeasurements = async () => {
         try {
@@ -84,6 +85,13 @@ const Measurements: React.FC = () => {
                 m.location.stationName.toLowerCase().includes(query) ||
                 m.location.processStep.toLowerCase().includes(query)
             );
+        }
+
+        // Historical filter
+        if (historicalFilter === 'historical') {
+            filtered = filtered.filter(m => m.isHistorical);
+        } else if (historicalFilter === 'realtime') {
+            filtered = filtered.filter(m => !m.isHistorical);
         }
 
         setFilteredMeasurements(filtered);
@@ -141,7 +149,7 @@ const Measurements: React.FC = () => {
 
             {/* Filters */}
             <Paper sx={{ p: 2, mb: 3 }}>
-                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 2 }}>
+                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(4, 1fr)' }, gap: 2 }}>
                     <FormControl fullWidth size="small">
                         <InputLabel>Status Filter</InputLabel>
                         <Select
@@ -168,6 +176,19 @@ const Measurements: React.FC = () => {
                             <MenuItem value="SCALE">Scale</MenuItem>
                             <MenuItem value="MANUAL">Manual</MenuItem>
                             <MenuItem value="DOCUMENT_SCAN">Document Scan</MenuItem>
+                        </Select>
+                    </FormControl>
+
+                    <FormControl fullWidth size="small">
+                        <InputLabel>Entry Type</InputLabel>
+                        <Select
+                            value={historicalFilter}
+                            label="Entry Type"
+                            onChange={(e) => setHistoricalFilter(e.target.value)}
+                        >
+                            <MenuItem value="all">All Entries</MenuItem>
+                            <MenuItem value="realtime">Real-time Only</MenuItem>
+                            <MenuItem value="historical">Historical Only</MenuItem>
                         </Select>
                     </FormControl>
 
@@ -225,6 +246,16 @@ const Measurements: React.FC = () => {
                                         <Typography variant="body2" fontFamily="monospace">
                                             {m.id}
                                         </Typography>
+                                        {m.isHistorical && (
+                                            <Chip
+                                                icon={<History />}
+                                                label="HISTORICAL"
+                                                size="small"
+                                                color="warning"
+                                                variant="outlined"
+                                                sx={{ mt: 0.5 }}
+                                            />
+                                        )}
                                     </TableCell>
                                     <TableCell>
                                         <Typography variant="body2">

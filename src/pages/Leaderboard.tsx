@@ -67,7 +67,7 @@ const Leaderboard: React.FC = () => {
     const restOfList = filteredData.slice(3);
 
     // Find the logged-in user's entry
-    const personalEntry = mockLeaderboard.find(d => d.userId === user?.id || (user?.role === 'operator' && d.role === 'operator' && d.userId === '1')); // the mock has user '1' as logged in operator
+    const personalEntry = mockLeaderboard.find(d => d.userId === user?.id || (user?.role === 'field_worker' && d.role === 'operator' && d.userId === '1')); // the mock has user '1' as logged in field worker
 
     const getRoleLabel = (role: string) => {
         return role.charAt(0).toUpperCase() + role.slice(1);
@@ -160,8 +160,8 @@ const Leaderboard: React.FC = () => {
             <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
                 <Tabs value={tabValue} onChange={(_, nv) => setTabValue(nv)} aria-label="leaderboard roles">
                     <Tab label="All Roles (Normalized)" />
-                    <Tab label="Operators" />
-                    <Tab label="Supervisors" />
+                    <Tab label="Field Workers" />
+                    <Tab label="Plant Engineers" />
                     <Tab label="Auditors" />
                 </Tabs>
             </Box>
@@ -227,7 +227,7 @@ const Leaderboard: React.FC = () => {
                     </TableHead>
                     <TableBody>
                         {restOfList.map((row: any) => {
-                            const isCurrentUser = row.userId === user?.id || (user?.role === 'operator' && row.role === 'operator' && row.userId === '1');
+                            const isCurrentUser = row.userId === user?.id || (user?.role === 'field_worker' && row.role === 'operator' && row.userId === '1');
                             const displayRank = tabValue === 0 ? row.mixedRank : row.rank;
 
                             return (

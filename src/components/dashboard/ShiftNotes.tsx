@@ -49,7 +49,7 @@ const ShiftNotes: React.FC = () => {
     };
 
     return (
-        <Paper sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
+        <Paper sx={{ p: 2, flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                 <EditNote sx={{ mr: 1, color: 'primary.main' }} />
                 <Typography variant="h6" fontWeight="bold">

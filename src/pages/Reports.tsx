@@ -44,12 +44,14 @@ import {
 } from '@mui/icons-material';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useAudit } from '../contexts/AuditContext';
 import StatusBadge from '../components/common/StatusBadge';
 import { generateEndOfDayReport, EndOfDayReport } from '../utils/endOfDayService';
 import { BatchRecord } from '../services/batchService';
 import { MeasurementRecord } from '../services/measurementService';
 import { evidencePackageService } from '../utils/evidencePackageService';
 import { mockEvidencePackage } from '../mockData';
+import { exportToCSV, exportEodToPDF } from '../utils/exportUtils';
 
 const Reports: React.FC = () => {
     const { measurements, discrepancies, batches } = useData();
@@ -57,6 +59,7 @@ const Reports: React.FC = () => {
     const location = useLocation();
     const navigate = useNavigate();
     const [tabValue, setTabValue] = useState(0);
+    const { logs } = useAudit();
 
     const [reportDate, setReportDate] = useState<string>(new Date().toISOString().split('T')[0]);
     const [eodReport, setEodReport] = useState<EndOfDayReport | null>(null);
@@ -65,6 +68,11 @@ const Reports: React.FC = () => {
     // Evidence Packages State
     const [epStartDate, setEpStartDate] = useState('');
     const [epEndDate, setEpEndDate] = useState('');
+
+    const [auditStartDate, setAuditStartDate] = useState('');
+    const [auditEndDate, setAuditEndDate] = useState('');
+    const [excStartDate, setExcStartDate] = useState('');
+    const [excEndDate, setExcEndDate] = useState('');
     const [completenessThreshold, setCompletenessThreshold] = useState<number | ''>('');
     const [previewPackage, setPreviewPackage] = useState<any>(null);
 
@@ -98,14 +106,6 @@ const Reports: React.FC = () => {
         });
     };
 
-    // Mock Audit Log (In real app, this would come from an AuditContext or API)
-    const auditLog = [
-        { id: 1, action: 'Batch Created', details: 'Batch B-2023-11-01 Created by Supervisor', time: '10:00 AM', user: 'Sarah Supervisor' },
-        { id: 2, action: 'Discrepancy Resolved', details: 'Manual Match Confirmed for Input #45', time: '09:30 AM', user: 'Sarah Supervisor' },
-        { id: 3, action: 'Measurement Recorded', details: 'Intake Weight: 500kg', time: '08:15 AM', user: 'John Operator' },
-        { id: 4, action: 'System Login', details: 'User logged in', time: '08:00 AM', user: 'John Operator' },
-    ];
-
     const getEvidencePackagesData = () => {
         const completedBatches = (batches as any as BatchRecord[]).filter(b => b.status === 'COMPLETED' || b.status === 'APPROVED_OVERDUE');
         return completedBatches.map(b => {
@@ -134,15 +134,24 @@ const Reports: React.FC = () => {
         return true;
     });
 
+    const filteredLogs = logs.filter(log => {
+        if (auditStartDate && new Date(log.timestamp) < new Date(auditStartDate)) return false;
+        if (auditEndDate && new Date(log.timestamp) > new Date(auditEndDate + 'T23:59:59')) return false;
+        return true;
+    });
+
+    const filteredDiscrepancies = discrepancies.filter(d => {
+        if (excStartDate && new Date(d.detected) < new Date(excStartDate)) return false;
+        if (excEndDate && new Date(d.detected) > new Date(excEndDate + 'T23:59:59')) return false;
+        return true;
+    });
+
     return (
         <Box>
             <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Typography variant="h4" fontWeight="bold">
                     Reports & Audit
                 </Typography>
-                <Button variant="outlined" startIcon={<FileDownload />}>
-                    Export All Data
-                </Button>
             </Box>
 
             <Paper sx={{ mb: 3 }}>
@@ -170,6 +179,16 @@ const Reports: React.FC = () => {
                             <Button variant="contained" onClick={handleGenerateReport}>
                                 Generate Report
                             </Button>
+                            {eodReport && (
+                                <>
+                                    <Button variant="outlined" startIcon={<FileDownload />} onClick={() => {
+                                        exportToCSV(eodReport.batches.map(b => ({
+                                            BatchID: b.batchId, Product: b.productName, Input: b.totalInputKg, Output: b.totalOutputKg, Delta: b.massBalanceDelta, Reliability: b.reliabilityScore
+                                        })), ['BatchID', 'Product', 'Input', 'Output', 'Delta', 'Reliability'], `EOD_${eodReport.date.toISOString().split('T')[0]}`);
+                                    }}>CSV</Button>
+                                    <Button variant="outlined" color="info" startIcon={<PictureAsPdf />} onClick={() => exportEodToPDF(eodReport)}>PDF</Button>
+                                </>
+                            )}
                         </Box>
                         {eodReport && (
                             <Chip
@@ -290,7 +309,7 @@ const Reports: React.FC = () => {
                             <Grid container spacing={3}>
                                 {/* Exception Summary */}
                                 <Grid size={{ xs: 12, md: eodReport.requiresSupervisorSignOff ? 8 : 12 }}>
-                                    <Paper sx={{ p: 3, h: '100%' }}>
+                                    <Paper sx={{ p: 3, height: '100%' }}>
                                         <Typography variant="h6" gutterBottom>Exception Summary</Typography>
                                         <Divider sx={{ mb: 2 }} />
                                         <List>
@@ -365,11 +384,11 @@ const Reports: React.FC = () => {
                                                         color="primary"
                                                         fullWidth
                                                         onClick={handleSignOff}
-                                                        disabled={!signOffNotes.trim() || user?.role !== 'admin'}
+                                                        disabled={!signOffNotes.trim() || (user?.role !== 'super_admin' && user?.role !== 'plant_engineer')}
                                                     >
                                                         Sign Off End of Day
                                                     </Button>
-                                                    {user?.role !== 'admin' && (
+                                                    {(user?.role !== 'super_admin' && user?.role !== 'plant_engineer') && (
                                                         <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1, textAlign: 'center' }}>
                                                             Only supervisors can sign off.
                                                         </Typography>
@@ -387,36 +406,68 @@ const Reports: React.FC = () => {
 
             {/* Audit Trail Tab */}
             {tabValue === 1 && (
-                <Paper>
-                    <List>
-                        {auditLog.map((log) => (
-                            <React.Fragment key={log.id}>
-                                <ListItem>
-                                    <ListItemText
-                                        primary={<Typography fontWeight="bold">{log.action}</Typography>}
-                                        secondary={
-                                            <React.Fragment>
-                                                <Typography component="span" variant="body2" color="text.primary">
-                                                    {log.user} - {log.time}
-                                                </Typography>
-                                                <br />
-                                                {log.details}
-                                            </React.Fragment>
-                                        }
-                                    />
-                                </ListItem>
-                                <Divider component="li" />
-                            </React.Fragment>
-                        ))}
-                    </List>
+                <Paper sx={{ p: 3 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2, flexWrap: 'wrap', gap: 2 }}>
+                        <Typography variant="h6">Audit Log</Typography>
+                        <Box sx={{ display: 'flex', gap: 2 }}>
+                            <TextField type="date" label="Start Date" size="small" slotProps={{ inputLabel: { shrink: true } }} value={auditStartDate} onChange={e => setAuditStartDate(e.target.value)} />
+                            <TextField type="date" label="End Date" size="small" slotProps={{ inputLabel: { shrink: true } }} value={auditEndDate} onChange={e => setAuditEndDate(e.target.value)} />
+                            <Button variant="outlined" startIcon={<FileDownload />} onClick={() => {
+                                exportToCSV(filteredLogs.map(l => ({ Timestamp: l.timestamp.toLocaleString(), User: l.userRole, Action: l.action, Details: l.details, IP: l.ipAddress || 'N/A' })), ['Timestamp', 'User', 'Action', 'Details', 'IP'], 'Audit_Log');
+                            }}>CSV</Button>
+                        </Box>
+                    </Box>
+                    <TableContainer>
+                        <Table>
+                            <TableHead>
+                                <TableRow>
+                                    <TableCell>Timestamp</TableCell>
+                                    <TableCell>User/Role</TableCell>
+                                    <TableCell>Action</TableCell>
+                                    <TableCell>Details</TableCell>
+                                    <TableCell>IP Address</TableCell>
+                                </TableRow>
+                            </TableHead>
+                            <TableBody>
+                                {filteredLogs.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell colSpan={5} align="center">No audit logs available.</TableCell>
+                                    </TableRow>
+                                ) : (
+                                    filteredLogs.map((log) => (
+                                        <TableRow key={log.id}>
+                                            <TableCell>{log.timestamp.toLocaleString()}</TableCell>
+                                            <TableCell>{log.userRole}</TableCell>
+                                            <TableCell>
+                                                <Chip
+                                                    label={log.action}
+                                                    size="small"
+                                                    color={log.action.includes('ERROR') || log.action.includes('FAILED') ? 'error' : 'default'}
+                                                />
+                                            </TableCell>
+                                            <TableCell>{log.details}</TableCell>
+                                            <TableCell>{log.ipAddress || 'N/A'}</TableCell>
+                                        </TableRow>
+                                    ))
+                                )}
+                            </TableBody>
+                        </Table>
+                    </TableContainer>
                 </Paper>
             )}
 
             {/* Exception Log Tab */}
             {tabValue === 2 && (
-                <Paper>
+                <Paper sx={{ p: 3 }}>
+                    <Box sx={{ display: 'flex', gap: 2, mb: 2, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                        <TextField type="date" label="Start Date" size="small" slotProps={{ inputLabel: { shrink: true } }} value={excStartDate} onChange={e => setExcStartDate(e.target.value)} />
+                        <TextField type="date" label="End Date" size="small" slotProps={{ inputLabel: { shrink: true } }} value={excEndDate} onChange={e => setExcEndDate(e.target.value)} />
+                        <Button variant="outlined" startIcon={<FileDownload />} onClick={() => {
+                            exportToCSV(filteredDiscrepancies.map(d => ({ Found: d.detected.toLocaleDateString(), Batch: d.batchId, Type: d.type, Severity: d.severity, Description: d.description, Status: d.status })), ['Found', 'Batch', 'Type', 'Severity', 'Description', 'Status'], 'Exception_Log');
+                        }}>CSV</Button>
+                    </Box>
                     <List>
-                        {discrepancies.map((disc) => (
+                        {filteredDiscrepancies.map((disc) => (
                             <React.Fragment key={disc.id}>
                                 <ListItem>
                                     <ListItemText
@@ -428,7 +479,7 @@ const Reports: React.FC = () => {
                                 <Divider component="li" />
                             </React.Fragment>
                         ))}
-                        {discrepancies.length === 0 && (
+                        {filteredDiscrepancies.length === 0 && (
                             <ListItem><ListItemText primary="No exceptions found." /></ListItem>
                         )}
                     </List>
@@ -439,7 +490,12 @@ const Reports: React.FC = () => {
             {tabValue === 3 && (
                 <Box>
                     <Paper sx={{ p: 3, mb: 3 }}>
-                        <Typography variant="h6" gutterBottom>Filter Packages</Typography>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                            <Typography variant="h6">Filter Packages</Typography>
+                            <Button variant="outlined" startIcon={<FileDownload />} onClick={() => {
+                                exportToCSV(filteredPackages.map(p => ({ BatchID: p.batch.id, Product: p.batch.productName, CompletionDate: p.batch.completionDate ? new Date(p.batch.completionDate).toLocaleDateString() : 'N/A', Measurements: p.measurementsCount, Completeness: `${p.completeness.toFixed(0)}%`, MassBalance: p.massBalanceStatus })), ['BatchID', 'Product', 'CompletionDate', 'Measurements', 'Completeness', 'MassBalance'], 'Evidence_Packages_Summary');
+                            }}>Bulk CSV</Button>
+                        </Box>
                         <Grid container spacing={2}>
                             <Grid size={{ xs: 12, md: 3 }}>
                                 <TextField

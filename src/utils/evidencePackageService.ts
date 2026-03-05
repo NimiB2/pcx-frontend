@@ -94,11 +94,12 @@ export const evidencePackageService = {
         const pkgId = `PKG-${batch.id}-${Date.now().toString().slice(-6)}`;
 
         // Calculate mass balance
-        const totalInput = batch.quantities.received;
+        const totalInput = batch.quantities?.received || 0;
         // Approximation: final + waste + returned
-        const totalOutput = batch.outputs.filter(o => o.type === 'FINAL_PRODUCT').reduce((sum, o) => sum + o.quantityKg, 0);
-        const waste = batch.outputs.filter(o => o.type === 'WASTE').reduce((sum, o) => sum + o.quantityKg, 0);
-        const returned = batch.quantities.returned || 0;
+        const outputs = batch.outputs || [];
+        const totalOutput = outputs.filter(o => o.type === 'FINAL_PRODUCT').reduce((sum, o) => sum + o.quantityKg, 0);
+        const waste = outputs.filter(o => o.type === 'WASTE').reduce((sum, o) => sum + o.quantityKg, 0);
+        const returned = batch.quantities?.returned || 0;
         const delta = totalInput - (totalOutput + waste + returned);
         const isBalanced = Math.abs(delta) < 0.01;
         const massBalanceStatus = isBalanced ? 'OK' : (Math.abs(delta) < 50 ? 'WARNING' : 'CRITICAL');
@@ -126,7 +127,7 @@ export const evidencePackageService = {
                 supplier: batch.metadata?.supplier,
                 lotNumber: batch.metadata?.lotNumber,
             },
-            composition: batch.composition,
+            composition: batch.composition || [],
             quantities: {
                 totalInputKg: totalInput,
                 washingLossKg: 0, // placeholder

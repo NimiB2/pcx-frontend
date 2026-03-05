@@ -609,7 +609,7 @@ const Reports: React.FC = () => {
                                                 <Typography fontWeight="bold">Batch & Material Information</Typography>
                                             </AccordionSummary>
                                             <AccordionDetails>
-                                                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+                                                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
                                                     <Box>
                                                         <Typography variant="caption" color="text.secondary">Product</Typography>
                                                         <Typography variant="body2">{previewPackage.batch.productName}</Typography>
@@ -627,7 +627,7 @@ const Reports: React.FC = () => {
                                                 <Typography fontWeight="bold">Mass Balance ({previewPackage.massBalance.status})</Typography>
                                             </AccordionSummary>
                                             <AccordionDetails>
-                                                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+                                                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
                                                     <Box>
                                                         <Typography variant="caption" color="text.secondary">Total Input / Output</Typography>
                                                         <Typography variant="body2">{previewPackage.quantities.totalInputKg} kg / {previewPackage.quantities.finalOutputKg} kg</Typography>

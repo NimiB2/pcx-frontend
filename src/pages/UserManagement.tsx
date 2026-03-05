@@ -183,10 +183,10 @@ const UserManagement: React.FC = () => {
                                 </TableCell>
                                 <TableCell sx={{ color: 'text.secondary' }}>{user.lastActive}</TableCell>
                                 <TableCell align="right">
-                                    <IconButton size="small" color="primary" onClick={() => handleOpenModal(user)}>
+                                    <IconButton size="small" color="primary" aria-label={`Edit user ${user.name}`} onClick={() => handleOpenModal(user)}>
                                         <EditIcon fontSize="small" />
                                     </IconButton>
-                                    <IconButton size="small" color="error" onClick={() => handleDelete(user.id)}>
+                                    <IconButton size="small" color="error" aria-label={`Delete user ${user.name}`} onClick={() => handleDelete(user.id)}>
                                         <DeleteIcon fontSize="small" />
                                     </IconButton>
                                 </TableCell>

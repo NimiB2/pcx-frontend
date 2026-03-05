@@ -90,12 +90,29 @@ export const theme = createTheme({
                     borderRadius: '2px', // Square, industrial look
                     textTransform: 'none',
                     fontWeight: 600,
+                    minHeight: 44,
+                    minWidth: 44,
                 },
                 contained: {
                     boxShadow: 'none',
                     '&:hover': {
                         boxShadow: 'none',
                     },
+                },
+            },
+        },
+        MuiIconButton: {
+            styleOverrides: {
+                root: {
+                    minHeight: 44,
+                    minWidth: 44,
+                },
+            },
+        },
+        MuiMenuItem: {
+            styleOverrides: {
+                root: {
+                    minHeight: 44,
                 },
             },
         },

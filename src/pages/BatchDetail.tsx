@@ -715,7 +715,7 @@ const BatchDetail: React.FC = () => {
                                 {breakdown.totalEligibleKg.toFixed(2)} kg
                             </Typography>
                         </Box>
-                        <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+                        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
                             <Box>
                                 <Typography variant="caption" color="info.main" fontWeight="bold">
                                     Rigid ({breakdown.rigidPercentage.toFixed(1)}%)
@@ -1000,7 +1000,7 @@ const BatchDetail: React.FC = () => {
                                         <Typography fontWeight="bold">Batch & Material Information</Typography>
                                     </AccordionSummary>
                                     <AccordionDetails>
-                                        <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+                                        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
                                             <Box>
                                                 <Typography variant="caption" color="text.secondary">Product</Typography>
                                                 <Typography variant="body2">{pkg.batch.productName}</Typography>
@@ -1018,7 +1018,7 @@ const BatchDetail: React.FC = () => {
                                         <Typography fontWeight="bold">Mass Balance ({pkg.massBalance.status})</Typography>
                                     </AccordionSummary>
                                     <AccordionDetails>
-                                        <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+                                        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
                                             <Box>
                                                 <Typography variant="caption" color="text.secondary">Total Input / Output</Typography>
                                                 <Typography variant="body2">{pkg.quantities.totalInputKg} kg / {pkg.quantities.finalOutputKg} kg</Typography>

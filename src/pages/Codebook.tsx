@@ -215,10 +215,10 @@ const Codebook: React.FC = () => {
                                     />
                                 </TableCell>
                                 <TableCell align="right">
-                                    <IconButton size="small" color="primary" onClick={() => handleOpenModal(row)}>
+                                    <IconButton size="small" color="primary" aria-label={`Edit definition for ${row.code}`} onClick={() => handleOpenModal(row)}>
                                         <EditIcon fontSize="small" />
                                     </IconButton>
-                                    <IconButton size="small" color="error" onClick={() => handleDelete(row.code)}>
+                                    <IconButton size="small" color="error" aria-label={`Delete definition for ${row.code}`} onClick={() => handleDelete(row.code)}>
                                         <DeleteIcon fontSize="small" />
                                     </IconButton>
                                 </TableCell>

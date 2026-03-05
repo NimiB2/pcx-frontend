@@ -417,7 +417,7 @@ const MeasurementCapture: React.FC = () => {
 
                         <Box>
                             <Typography variant="subtitle2" gutterBottom>Production Batch (Optional for intake)</Typography>
-                            <Box sx={{ display: 'flex', gap: 2 }}>
+                            <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2 }}>
                                 <FormControl fullWidth size="small">
                                     <InputLabel>Active Batch</InputLabel>
                                     <Select
@@ -426,7 +426,7 @@ const MeasurementCapture: React.FC = () => {
                                         onChange={(e) => setBatchId(e.target.value)}
                                         endAdornment={
                                             <InputAdornment position="end">
-                                                <IconButton size="small"><QrCodeScanner /></IconButton>
+                                                <IconButton size="small" aria-label="Scan QR code"><QrCodeScanner /></IconButton>
                                             </InputAdornment>
                                         }
                                     >
@@ -590,7 +590,7 @@ const MeasurementCapture: React.FC = () => {
                                 <Box key={row.id} sx={{ mb: 3, p: 2, border: '1px solid #eee', borderRadius: 2, position: 'relative' }}>
                                     <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                                         <Typography variant="subtitle2" color="text.secondary">Ingredient #{index + 1}</Typography>
-                                        <IconButton size="small" color="error" onClick={() => handleRemoveIngredient(row.id)}>
+                                        <IconButton size="small" color="error" aria-label={`Remove ingredient ${row.materialCode || ''}`} onClick={() => handleRemoveIngredient(row.id)}>
                                             <Delete fontSize="small" />
                                         </IconButton>
                                     </Box>
@@ -608,7 +608,7 @@ const MeasurementCapture: React.FC = () => {
                                         <ToggleButton value="MIXED" color="warning">Mixed</ToggleButton>
                                     </ToggleButtonGroup>
 
-                                    <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+                                    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
                                         <TextField
                                             label="Material Code"
                                             value={row.materialCode}
@@ -661,7 +661,7 @@ const MeasurementCapture: React.FC = () => {
                                 </ToggleButtonGroup>
                             </Box>
 
-                            <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+                            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
                                 <TextField
                                     label="Material Code"
                                     value={singleMaterialCode}
@@ -708,7 +708,7 @@ const MeasurementCapture: React.FC = () => {
                     </Box>
                 </AccordionSummary>
                 <AccordionDetails>
-                    <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
+                    <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2, mb: 3 }}>
                         <Button
                             variant={evidenceAttached ? "contained" : "outlined"}
                             color={evidenceAttached ? "success" : "primary"}

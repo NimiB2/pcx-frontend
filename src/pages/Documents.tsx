@@ -207,15 +207,15 @@ const Documents: React.FC = () => {
                                                     {getStatusChip(doc.status, doc.expiryDate)}
                                                 </Box>
                                                 <Box sx={{ mt: 1 }}>
-                                                    <IconButton title="Download Latest">
+                                                    <IconButton title="Download Latest" aria-label={`Download latest version of ${doc.name}`}>
                                                         <Download fontSize="small" />
                                                     </IconButton>
                                                     {canManageDocuments && (
                                                         <>
-                                                            <IconButton title="Upload New Version" color="primary" onClick={() => handleOpenNewVersion(doc)}>
+                                                            <IconButton title="Upload New Version" color="primary" aria-label={`Upload new version for ${doc.name}`} onClick={() => handleOpenNewVersion(doc)}>
                                                                 <UploadFile fontSize="small" />
                                                             </IconButton>
-                                                            <IconButton title="Delete" color="error" onClick={() => handleDelete(doc.id)}>
+                                                            <IconButton title="Delete" color="error" aria-label={`Delete document ${doc.name}`} onClick={() => handleDelete(doc.id)}>
                                                                 <Delete fontSize="small" />
                                                             </IconButton>
                                                         </>
@@ -237,7 +237,7 @@ const Documents: React.FC = () => {
                                                                 primaryTypographyProps={{ variant: 'body2' }}
                                                                 secondaryTypographyProps={{ variant: 'caption' }}
                                                             />
-                                                            <IconButton size="small" title="Download this version">
+                                                            <IconButton size="small" title="Download this version" aria-label={`Download version ${v.versionNumber} of ${doc.name}`}>
                                                                 <Download fontSize="small" />
                                                             </IconButton>
                                                         </ListItem>

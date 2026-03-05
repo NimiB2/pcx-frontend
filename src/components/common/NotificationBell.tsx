@@ -142,7 +142,7 @@ const NotificationBell: React.FC = () => {
                     <Typography variant="h6" fontWeight="bold">Notifications</Typography>
                     {unreadCount > 0 && (
                         <Tooltip title="Mark all as read">
-                            <IconButton size="small" onClick={(e) => { e.stopPropagation(); markAllAsRead(); }}>
+                            <IconButton size="small" aria-label="Mark all notifications as read" onClick={(e) => { e.stopPropagation(); markAllAsRead(); }}>
                                 <CheckIcon fontSize="small" />
                             </IconButton>
                         </Tooltip>
@@ -210,6 +210,17 @@ const NotificationBell: React.FC = () => {
                             ))}
                         </List>
                     )}
+                </Box>
+
+                <Divider />
+                <Box sx={{ p: 1 }}>
+                    <Button
+                        fullWidth
+                        size="small"
+                        onClick={() => { navigate('/notifications'); handleClose(); }}
+                    >
+                        View All Notifications
+                    </Button>
                 </Box>
             </Menu>
         </React.Fragment >

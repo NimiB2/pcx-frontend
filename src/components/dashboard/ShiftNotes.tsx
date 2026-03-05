@@ -61,7 +61,7 @@ const ShiftNotes: React.FC = () => {
                 <TextField
                     fullWidth
                     size="small"
-                    placeholder="Log event or handover note..."
+                    label="Log event or handover note"
                     value={newNote}
                     onChange={(e) => setNewNote(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && handleAddNote()}
@@ -93,7 +93,7 @@ const ShiftNotes: React.FC = () => {
                         <ListItem
                             secondaryAction={
                                 note.author === 'Me' && (
-                                    <IconButton edge="end" size="small" onClick={() => handleDelete(note.id)}>
+                                    <IconButton edge="end" size="small" aria-label="Delete note" onClick={() => handleDelete(note.id)}>
                                         <Delete fontSize="small" color="action" />
                                     </IconButton>
                                 )

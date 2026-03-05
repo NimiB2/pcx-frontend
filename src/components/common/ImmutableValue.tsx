@@ -62,7 +62,7 @@ const ImmutableValue: React.FC<ImmutableValueProps> = ({ currentValue, previousV
             {history && history.length > 0 && (
                 <>
                     <Tooltip title="View value history">
-                        <IconButton size="small" onClick={handleHistoryClick} sx={{ padding: '2px' }}>
+                        <IconButton size="small" aria-label="View value history" onClick={handleHistoryClick} sx={{ padding: '2px' }}>
                             <HistoryIcon sx={{ fontSize: '1rem', color: 'action.active' }} />
                         </IconButton>
                     </Tooltip>

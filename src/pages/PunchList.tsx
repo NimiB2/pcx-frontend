@@ -146,10 +146,10 @@ const PunchList: React.FC = () => {
                                                     <EvidenceLink hasEvidence={task.status === 'COMPLETED'} />
                                                     {canManageTasks && (
                                                         <Box sx={{ ml: 2, display: 'flex' }}>
-                                                            <IconButton size="small" onClick={() => handleOpenEdit(task)}>
+                                                            <IconButton size="small" aria-label={`Edit task ${task.title}`} onClick={() => handleOpenEdit(task)}>
                                                                 <EditIcon fontSize="small" />
                                                             </IconButton>
-                                                            <IconButton size="small" color="error" onClick={() => handleDelete(task.id)}>
+                                                            <IconButton size="small" color="error" aria-label={`Delete task ${task.title}`} onClick={() => handleDelete(task.id)}>
                                                                 <DeleteIcon fontSize="small" />
                                                             </IconButton>
                                                         </Box>

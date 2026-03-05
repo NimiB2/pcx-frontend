@@ -23,6 +23,7 @@ import {
   Reports,
   UserManagement,
   CreditsDashboard,
+  NotificationsPage,
 } from './pages/index';
 import RegulatoryDashboard from './pages/dashboard/RegulatoryDashboard';
 import Leaderboard from './pages/Leaderboard';
@@ -219,6 +220,9 @@ function App() {
                                 <UserManagement />
                               </ProtectedRoute>
                             } />
+
+                            {/* Notifications — all authenticated roles */}
+                            <Route path="/notifications" element={<NotificationsPage />} />
                           </Routes>
                         </Layout>
                       </ProtectedRoute>

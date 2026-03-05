@@ -1,4 +1,16 @@
+/**
+ * SupervisorDashboard — high-level control tower for supervisors and admins.
+ *
+ * Accessible to `super_admin` (typically). Shows:
+ * - KPI stat cards: active batches, batches at risk, overdue, daily measurements,
+ *   critical discrepancies, certification readiness score, End-of-Day status, and credits summary.
+ * - Live Production Pipeline (horizontal Kanban of batch stages).
+ * - ActionCenter tabbed panel (alerts, reviews, expiring docs).
+ * - Gamification section: supervisor's own standing + top 3 operator leaderboard.
+ * - Weekly mass balance bar chart and reconciliation/readiness task feeds.
+ */
 import React from 'react';
+
 import {
     Paper,
     Typography,

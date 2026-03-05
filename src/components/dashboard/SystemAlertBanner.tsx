@@ -2,7 +2,16 @@ import React, { useState } from 'react';
 import { Alert, AlertTitle, Box, Collapse, IconButton } from '@mui/material';
 import { Close } from '@mui/icons-material';
 
+/**
+ * SystemAlertBanner Component
+ *
+ * Displays a dismissible alert bar at the top of a dashboard to announce
+ * system-wide events (e.g. scheduled maintenance, outages).
+ * Currently uses hardcoded mock alert data. In production this should be driven
+ * by a backend broadcast API or the NotificationContext.
+ */
 const SystemAlertBanner: React.FC = () => {
+
     const [open, setOpen] = useState(true);
 
     // Mock alert data - could come from props or context later

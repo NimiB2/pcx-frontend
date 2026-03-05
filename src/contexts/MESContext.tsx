@@ -1,7 +1,15 @@
+/**
+ * MESContext — tracks the simulated MES (Manufacturing Execution System) connection state.
+ *
+ * In production this would be driven by a WebSocket or polling connection to the MES.
+ * For now, `isOnline` is toggled manually (e.g. from the dev toolbar or a test utility).
+ */
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 
 interface MESContextType {
+    /** Whether the MES is currently considered online and syncing data. */
     isOnline: boolean;
+    /** Manually flips the online/offline state — used for development and demo purposes. */
     toggleMESStatus: () => void;
 }
 

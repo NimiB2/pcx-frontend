@@ -1,4 +1,19 @@
+/**
+ * Reports — centralised reporting and audit hub. Accessible to all roles.
+ *
+ * Provides four tabs:
+ * 1. **End-of-Day Report** — generates a nightly mass-balance and reliability summary
+ *    via `endOfDayService`. Supervisors can digitally sign off when required.
+ *    Exportable to CSV or PDF via `exportUtils`.
+ * 2. **Audit Trail** — filterable log of all user actions from `AuditContext`.
+ * 3. **Exception Log** — filterable list of all discrepancies from `DataContext`.
+ * 4. **Evidence Packages** — per-batch evidence bundles with JSON/PDF export via
+ *    `evidencePackageService`. Supports date and completeness filtering.
+ *
+ * Deep-linkable: `/reports?tab=eod` opens the End-of-Day tab directly.
+ */
 import React, { useState, useEffect } from 'react';
+
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
     Box,

@@ -1,4 +1,16 @@
+/**
+ * PlantEngineerDashboard — operational overview for plant engineers.
+ *
+ * Accessible to `plant_engineer` and `super_admin`.
+ * Surfaces three key widgets:
+ * - Data Quality Overview (total/flagged measurements, manual-entry rate).
+ * - Pending VRCQ Approvals (batches awaiting sign-off, linked to /vrcq).
+ * - Open Discrepancies sorted by severity and detection time, linked to /reconciliation.
+ *
+ * Displays MES online/offline status in the header via MESContext.
+ */
 import React from 'react';
+
 import {
     Box,
     Paper,

@@ -1,3 +1,12 @@
+/**
+ * exportUtils — browser-side file export helpers.
+ *
+ * Provides two categories of exports:
+ * - **CSV**: generic table-to-CSV for any array of objects.
+ * - **PDF**:  formatted End-of-Day report via `jsPDF` + `jsPDF-AutoTable`.
+ *
+ * All exports trigger a browser download without opening a new tab.
+ */
 // @ts-ignore
 import jsPDF from 'jspdf';
 // @ts-ignore
@@ -38,6 +47,11 @@ export const exportToCSV = (data: any[], headers: string[], filename: string) =>
     document.body.removeChild(link);
 };
 
+/**
+ * Renders a formatted End-of-Day PDF report and triggers a browser download.
+ *
+ * @param eodReport - The report object produced by `generateEndOfDayReport`.
+ */
 export const exportEodToPDF = (eodReport: EndOfDayReport) => {
     const doc = new jsPDF();
     let yPos = 20;

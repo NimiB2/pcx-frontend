@@ -1,4 +1,13 @@
+/**
+ * OperatorDashboard — field worker's home screen.
+ *
+ * Accessible only to the `field_worker` role.
+ * Shows the current active batch context (name, progress bar, connectivity status),
+ * quick-action cards for recording measurements and capturing evidence,
+ * a recent activity feed, leaderboard standing, morning checklist, and shift log.
+ */
 import React from 'react';
+
 import {
     Box,
     Typography,

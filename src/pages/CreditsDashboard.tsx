@@ -1,4 +1,13 @@
+/**
+ * CreditsDashboard — overview of PCR credit eligibility, risk, and monthly trends.
+ *
+ * Accessible by plant_engineer, super_admin, and regulatory (read-only).
+ * Displays KPI cards (total eligible kg, completion %, flagged %, projected year-end),
+ * a Recharts pie chart (rigidity breakdown) and bar chart (monthly trend),
+ * and a per-batch eligibility table driven by `creditCalculations.ts`.
+ */
 import React, { useMemo } from 'react';
+
 import { Box, Typography, Paper, Card, CardContent, LinearProgress, Table, TableBody, TableCell, TableHead, TableRow } from '@mui/material';
 import { useData } from '../contexts/DataContext';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';

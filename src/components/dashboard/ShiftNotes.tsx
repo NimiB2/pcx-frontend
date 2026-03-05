@@ -21,7 +21,16 @@ interface Note {
     author: string;
 }
 
+/**
+ * ShiftNotes Component
+ *
+ * A lightweight shift log widget allowing operators to append timestamped notes
+ * during their shift (e.g. handover observations, incidents, equipment issues).
+ * Notes are stored in local component state and are not persisted between sessions.
+ * The operator can delete their own notes; notes from previous shifts are read-only.
+ */
 const ShiftNotes: React.FC = () => {
+
     const [notes, setNotes] = useState<Note[]>([
         {
             id: '1',

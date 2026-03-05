@@ -1,3 +1,10 @@
+/**
+ * AuthContext — manages the active user session and role-based permission checks.
+ *
+ * Uses a set of mock users (one per role) so any role can be selected on the login page
+ * without a real backend. Replace `MOCK_USERS` and `login` with real auth calls when
+ * connecting to the backend.
+ */
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 import { UserRole, hasPermission as checkPermission, isReadOnly as checkReadOnly, getRoleDisplayName } from '../utils/permissions';
 
@@ -67,13 +74,19 @@ const MOCK_USERS: Record<UserRole, User> = {
     },
 };
 
+/**
+ * Provides authentication state to the component tree.
+ * Internally selects a mock user profile for the chosen role.
+ */
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const [user, setUser] = useState<User | null>(null);
 
+    /** Sets the active user to the mock profile for the given role. */
     const login = useCallback((role: UserRole) => {
         setUser(MOCK_USERS[role]);
     }, []);
 
+    /** Clears the active user, effectively ending the session. */
     const logout = useCallback(() => {
         setUser(null);
     }, []);

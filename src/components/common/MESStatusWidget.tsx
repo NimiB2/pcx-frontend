@@ -3,12 +3,23 @@ import { Paper, Box, Typography, LinearProgress } from '@mui/material';
 import { CheckCircle, Error as ErrorIcon } from '@mui/icons-material';
 import { useMES } from '../../contexts/MESContext';
 
+/** Props for the MESStatusWidget component. */
 interface MESStatusWidgetProps {
+    /** Not currently used — online state is read from MESContext. Kept for potential future use. */
     status?: 'ONLINE' | 'OFFLINE';
+    /** Timestamp of the last successful MES data sync. Defaults to now. */
     lastSync?: Date;
 }
 
+/**
+ * MESStatusWidget Component
+ *
+ * Displays a colored banner indicating whether the MES connection is ONLINE or OFFLINE.
+ * The status is driven by `MESContext`, not the optional `status` prop.
+ * Shows a pulsing progress bar when online to signal active data sync.
+ */
 const MESStatusWidget: React.FC<MESStatusWidgetProps> = ({ lastSync = new Date() }) => {
+
     const { isOnline } = useMES();
     const status = isOnline ? 'ONLINE' : 'OFFLINE';
 

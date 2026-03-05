@@ -12,15 +12,34 @@ import {
 } from '@mui/material';
 import { Edit, Save } from '@mui/icons-material';
 
+/** Props for the SupersedeModal component. */
 interface SupersedeModalProps {
+    /** Controls the dialog's open/closed state. */
     open: boolean;
+    /** Called when the user cancels. */
     onClose: () => void;
+    /**
+     * Called after the operator confirms the correction.
+     * @param newValue - The corrected numeric value.
+     * @param reason   - The mandatory justification text.
+     */
     onConfirm: (newValue: number, reason: string) => void;
+    /** The original value being corrected. Shown to the operator for reference. */
     originalValue: number;
+    /** Unit of the value (e.g. 'kg'). */
     unit: string;
+    /** The ID of the batch the measurement belongs to, shown in the dialog body. */
     batchId: string;
 }
 
+/**
+ * SupersedeModal Component
+ *
+ * Allows an authorised user to correct (supersede) a measurement value.
+ * The correction creates a new record while **preserving the original** in the audit trail.
+ * Both a corrected value and a written justification are required before submission.
+ * The action is flagged as permanent in the UI to reinforce its audit significance.
+ */
 const SupersedeModal: React.FC<SupersedeModalProps> = ({
     open,
     onClose,

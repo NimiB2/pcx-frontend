@@ -18,9 +18,13 @@ import {
 import { useData, PunchListTask } from '../../contexts/DataContext';
 import { useNotifications } from '../../contexts/NotificationContext';
 
+/** Props for the TaskFormModal component. */
 interface TaskFormModalProps {
+    /** Controls the dialog's open/closed state. */
     open: boolean;
+    /** Called when the user cancels or after a successful save. */
     onClose: () => void;
+    /** If provided, the modal opens in 'Edit' mode pre-filled with the task's current values. */
     taskToEdit?: PunchListTask | null;
 }
 
@@ -35,6 +39,15 @@ const MenuProps = {
     },
 };
 
+/**
+ * TaskFormModal Component
+ *
+ * A dialog for creating or editing a PunchList task.
+ * - Create mode: opens with blank fields; calls `DataContext.addTask` on save.
+ * - Edit mode: pre-fills from `taskToEdit`; calls `DataContext.updateTaskDetails` on save.
+ *
+ * Dispatches a SUCCESS or INFO notification after saving.
+ */
 const TaskFormModal: React.FC<TaskFormModalProps> = ({ open, onClose, taskToEdit }) => {
     const { punchListTasks, addTask, updateTaskDetails } = useData();
     const { addNotification } = useNotifications();

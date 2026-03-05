@@ -19,6 +19,11 @@ interface PipelineStageProps {
     getIdentity: (code: string) => string;
 }
 
+/**
+ * PipelineStage — a single column in the production pipeline visualization.
+ * Highlights as ACTIVE (blue border) when it has at least one batch assigned.
+ * Shows a connector arrow on the right edge unless it is the final stage.
+ */
 const PipelineStage: React.FC<PipelineStageProps> = ({ title, icon, batches, isLast, getIdentity }) => {
     const theme = useTheme();
     const isActive = batches.length > 0;
@@ -113,6 +118,15 @@ const PipelineStage: React.FC<PipelineStageProps> = ({ title, icon, batches, isL
     );
 };
 
+/**
+ * ProductionPipeline Component
+ *
+ * A horizontal Kanban-style view showing all active batches mapped
+ * across five production stages: Intake → Mixing → Extrusion → Unification → Shipping.
+ *
+ * Stage assignment currently uses mock ID-based matching (e.g. id includes '001').
+ * Replace the `stages` memo logic with proper `currentProcessStep` field matching when available.
+ */
 const ProductionPipeline: React.FC = () => {
     const { batches, getIdentity } = useData();
 

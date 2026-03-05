@@ -2,7 +2,14 @@ import React from 'react';
 import { Chip } from '@mui/material';
 import { AdminPanelSettings } from '@mui/icons-material';
 
+/**
+ * AdminLabel Component
+ *
+ * A small red chip/badge displayed next to routes or features that are restricted to `super_admin`.
+ * Used in the navigation sidebar and feature headers.
+ */
 const AdminLabel: React.FC = () => {
+
     return (
         <Chip
             icon={<AdminPanelSettings sx={{ '&&': { color: 'inherit', fontSize: '0.9rem' } }} />}

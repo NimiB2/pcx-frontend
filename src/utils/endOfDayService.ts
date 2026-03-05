@@ -1,3 +1,11 @@
+/**
+ * endOfDayService — generates the nightly End-of-Day (EoD) report.
+ *
+ * The EoD report summarises all batch activity, mass balance checks,
+ * reliability scores, and credit eligibility data for a given target date.
+ * It also determines whether supervisor sign-off is required (triggered when
+ * any batch has a CRITICAL mass balance status or has credits at risk).
+ */
 import { BatchRecord } from '../services/batchService';
 import { MeasurementRecord } from '../services/measurementService';
 
@@ -46,6 +54,19 @@ export interface EndOfDayReport {
     };
 }
 
+/**
+ * Generates an End-of-Day report for all batches active on the given `targetDate`.
+ *
+ * For each active batch the report calculates:
+ * - Mass balance (input vs. output delta), with WARNING/CRITICAL thresholds.
+ * - Reliability score based on MES/manual measurement ratio and GPS coverage.
+ * - Credit eligible kg and whether credits are at risk.
+ *
+ * @param batches    - All batch records.
+ * @param measurements - All measurement records (filtered internally per batch).
+ * @param targetDate - The date for which to generate the report.
+ * @returns          A fully populated `EndOfDayReport` object.
+ */
 export const generateEndOfDayReport = (
     batches: BatchRecord[],
     measurements: MeasurementRecord[],

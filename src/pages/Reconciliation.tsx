@@ -1,4 +1,19 @@
+/**
+ * Reconciliation — production data reconciliation console for plant engineers.
+ *
+ * Accessible to `plant_engineer` and `super_admin`.
+ * Displays a side-by-side comparison of manual-entry vs. MES values for each open discrepancy.
+ * Engineers can take the following actions on each row:
+ * - **Supersede**: create a corrected record via `SupersedeModal` (produces an audit log entry).
+ * - **Acknowledge**: mark as seen without resolving.
+ * - **Accept Manual / MES**: resolve the discrepancy in favour of one source.
+ * - **Flag for Supervisor**: send a WARNING notification.
+ *
+ * Colour-coded by variance: >5% = BLOCKING (red), >2% = WARNING (yellow).
+ * The "Run Nightly Sync" button is disabled when MES is offline.
+ */
 import React, { useState } from 'react';
+
 import {
     Box,
     Paper,

@@ -1,4 +1,14 @@
+/**
+ * RegulatoryDashboard — read-only compliance and audit view for the `regulatory` role.
+ *
+ * Accessible to `regulatory` and `super_admin`.
+ * Displays system compliance score, a recent audit trail feed (currently mocked;
+ * will connect to AuditContext in Phase 11), and quick links to certification
+ * documents, VRCQ approvals, and system reports.
+ * All actions taken by the regulatory user are themselves logged in the audit trail.
+ */
 import React from 'react';
+
 import {
     Box,
     Paper,

@@ -2,12 +2,26 @@ import React, { useState, useEffect } from 'react';
 import { Chip, Tooltip } from '@mui/material';
 import { AccessTime, Warning, Error as ErrorIcon, CheckCircle } from '@mui/icons-material';
 
+/** Props for the SLACountdown component. */
 interface SLACountdownProps {
+    /** The SLA deadline. If omitted, a 'No SLA' chip is shown. */
     deadline?: Date;
+    /** The time the item was resolved. Used to determine if the SLA was met. */
     resolvedAt?: Date;
+    /** Current status of the discrepancy (e.g. 'OPEN', 'RESOLVED'). Controls display logic. */
     status: string;
 }
 
+/**
+ * SLACountdown Component
+ *
+ * Displays a real-time countdown chip until the SLA deadline.
+ * - OPEN items: counts down remaining hours/minutes; turns red when overdue.
+ * - RESOLVED items: shows whether the SLA was met or missed.
+ * - No deadline: shows a neutral 'No SLA' chip.
+ *
+ * The countdown ticks every minute via a `setInterval`.
+ */
 const SLACountdown: React.FC<SLACountdownProps> = ({ deadline, resolvedAt, status }) => {
     const [timeLeft, setTimeLeft] = useState<string>('');
     const [isOverdue, setIsOverdue] = useState(false);

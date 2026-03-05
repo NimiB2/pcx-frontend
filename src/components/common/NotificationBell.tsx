@@ -28,6 +28,10 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useNotifications, AppNotification, NotificationType } from '../../contexts/NotificationContext';
 
+/**
+ * Returns a human-readable relative time string (e.g. '5 minutes ago').
+ * Updates are not reactive — re-renders are required to reflect passage of time.
+ */
 const timeAgo = (date: Date) => {
     const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
     let interval = seconds / 31536000;
@@ -43,6 +47,16 @@ const timeAgo = (date: Date) => {
     return Math.floor(seconds) + ' seconds ago';
 };
 
+/**
+ * NotificationBell Component
+ *
+ * Renders the bell icon in the app header with an unread-count badge.
+ * Clicking it opens a dropdown Menu showing the latest notifications.
+ * Each notification can be marked as read or deleted inline.
+ * A "View All" link navigates to the full NotificationsPage.
+ *
+ * Reads from and writes to NotificationContext.
+ */
 const NotificationBell: React.FC = () => {
     const { notifications, unreadCount, markAsRead, markAllAsRead, clearNotification } = useNotifications();
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);

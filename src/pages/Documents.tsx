@@ -1,4 +1,13 @@
+/**
+ * Documents — document repository for certification evidence, permits, and calibration certificates.
+ *
+ * Accessible to all roles (read-only for field_worker and regulatory).
+ * `plant_engineer` and `super_admin` can upload new documents and add new versions.
+ * Documents are versioned: the active version is shown, previous versions are collapsible.
+ * Expiry warnings are derived from `documentService` and summarised in the "Required Documents" sidebar.
+ */
 import React, { useState, useEffect } from 'react';
+
 import {
     Box, Typography, Paper, Grid, Button, List, ListItem, ListItemText,
     ListItemIcon, Chip, Divider, IconButton, Dialog, DialogTitle,

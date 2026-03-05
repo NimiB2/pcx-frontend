@@ -49,7 +49,21 @@ function TabPanel(props: TabPanelProps) {
     );
 }
 
+/**
+ * ActionCenter Component
+ *
+ * A tabbed panel used on the Supervisor/PlantEngineer dashboard to surface
+ * the most urgent items that require immediate attention:
+ *
+ * - **Alerts**: HIGH severity discrepancies, CREDITS_AT_RISK flags, and overdue batches.
+ * - **Reviews**: MEDIUM severity discrepancies pending manual review.
+ * - **Docs**: Documents nearing expiry or already expired.
+ *
+ * Each item is a clickable link that navigates to the relevant page.
+ * Badge counts on the tab icons reflect the number of open items.
+ */
 const ActionCenter: React.FC = () => {
+
     const [tabValue, setTabValue] = useState(0);
     const { discrepancies, batches } = useData();
 

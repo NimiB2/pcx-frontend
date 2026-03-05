@@ -1,4 +1,12 @@
+/**
+ * Leaderboard — gamified performance ranking for field workers, plant engineers, and auditors.
+ *
+ * Accessible by all roles; the current user's rank is highlighted.
+ * Scoring uses `leaderboardService.getNormalizedScore` for cross-role comparisons in the "All Roles" tab.
+ * Time period filtering (Week / Month / All Time) is UI-only in the current mock implementation.
+ */
 import React, { useState, useMemo } from 'react';
+
 import {
     Box,
     Typography,

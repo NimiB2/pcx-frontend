@@ -1,4 +1,12 @@
+/**
+ * NotificationsPage — full notification history for the authenticated user.
+ *
+ * Accessible by all roles. Supports filtering by type (INFO/WARNING/ERROR/SUCCESS)
+ * and status (All/Unread/Read), plus bulk actions: Mark All Read and Clear All.
+ * Reads from and writes to NotificationContext.
+ */
 import React, { useState } from 'react';
+
 import {
     Box, Typography, Paper, List, ListItem, ListItemText, ListItemIcon,
     IconButton, Chip, Button, Divider, FormControl, InputLabel, Select, MenuItem,

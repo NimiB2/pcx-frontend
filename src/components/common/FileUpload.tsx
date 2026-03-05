@@ -21,12 +21,25 @@ const UploadContainer = styled(Paper)(({ theme }) => ({
     },
 }));
 
+/** Props for the FileUpload component. */
 interface FileUploadProps {
+    /** Called with the selected File object after validation passes. */
     onFileSelect: (file: File) => void;
+    /** MIME type or extension filter passed to the hidden input (e.g. '.pdf,.jpg'). Defaults to '*\/*'. */
     accept?: string;
+    /** Maximum allowed file size in megabytes. Defaults to 10. */
     maxSizeMB?: number;
 }
 
+/**
+ * FileUpload Component
+ *
+ * Drag-and-drop (or click-to-browse) file uploader with size validation.
+ * Calls `onFileSelect` only when the file passes validation.
+ * In development mode, a "[DEV] Use Mock File" button bypasses the dialog for quick testing.
+ *
+ * @component
+ */
 const FileUpload: React.FC<FileUploadProps> = ({
     onFileSelect,
     accept = '*/*',
@@ -54,6 +67,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
         if (!isDragging) setIsDragging(true);
     };
 
+    /** Clears any existing error and validates size; sets an error message and returns false on failure. */
     const validateFile = (file: File): boolean => {
         setError(null);
 

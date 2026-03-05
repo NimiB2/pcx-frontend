@@ -22,7 +22,19 @@ import {
 } from '@mui/icons-material';
 import ScaleCalibrationModal from '../modals/ScaleCalibrationModal';
 
+/**
+ * MorningChecklist Component
+ *
+ * Presents a short list of required pre-shift tasks for field workers.
+ * - **Scale Calibration**: opens the `ScaleCalibrationModal`; marks the task
+ *   complete only after the operator confirms calibration.
+ * - **Other tasks**: toggled directly in the list for demo purposes.
+ *
+ * When all tasks are completed, the card transitions to a green "Ready to Start" banner.
+ * A "Reset (Demo)" button reverts all tasks to incomplete for demonstration.
+ */
 const MorningChecklist: React.FC = () => {
+
     const [tasks, setTasks] = useState([
         { id: 'SCALE', label: 'Verify Scale Calibration', completed: false, icon: <Scale /> },
         { id: 'SYNC', label: 'Sync Offline Data', completed: false, icon: <Sync /> },

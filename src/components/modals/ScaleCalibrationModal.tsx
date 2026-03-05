@@ -13,12 +13,26 @@ import {
 } from '@mui/material';
 import { Scale, CheckCircle, PhotoCamera } from '@mui/icons-material';
 
+/** Props for the ScaleCalibrationModal component. */
 interface ScaleCalibrationModalProps {
+    /** Controls the dialog's open/closed state. */
     open: boolean;
+    /** Called when the user cancels without confirming. */
     onClose: () => void;
+    /** Called after a successful calibration confirmation. */
     onConfirm: () => void;
 }
 
+/**
+ * ScaleCalibrationModal Component
+ *
+ * Guides the operator through a two-step scale calibration check:
+ * 1. Enter the reading for a standard 5 kg test weight.
+ * 2. Attach a photo of the scale display as evidence.
+ *
+ * Shows a warning if the reading deviates more than 0.05 kg from the 5.0 kg standard.
+ * Calls `onConfirm` after a simulated API call (1 s delay) to mark the checklist task as done.
+ */
 const ScaleCalibrationModal: React.FC<ScaleCalibrationModalProps> = ({ open, onClose, onConfirm }) => {
     const [weight, setWeight] = useState('');
     const [photoTaken, setPhotoTaken] = useState(false);

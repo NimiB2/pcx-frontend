@@ -1,16 +1,33 @@
+/**
+ * AuditContext — append-only log of all significant user and system actions.
+ *
+ * Consumed by any component that needs to record an auditable event via `useAudit().addLog`.
+ * Logs are kept in memory for the current session (no persistence in the current mock).
+ */
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
+/** A single immutable audit log entry. */
 export interface AuditLog {
     id: string;
     timestamp: Date;
+    /** Role of the user who triggered the action (or 'system' for automated events). */
     userRole: string;
+    /** Action identifier, e.g. 'LOGIN', 'BATCH_CLOSED'. */
     action: string;
+    /** Human-readable description of what happened. */
     details: string;
+    /** IP address of the client (mocked to '192.168.1.1' for now). */
     ipAddress?: string;
 }
 
 interface AuditContextType {
     logs: AuditLog[];
+    /**
+     * Appends a new entry to the audit log.
+     * @param action  - Uppercase action identifier (e.g. 'MEASUREMENT_SUBMITTED')
+     * @param details - Free-text description of the event
+     * @param userRole - Role of the acting user or 'system'
+     */
     addLog: (action: string, details: string, userRole: string) => void;
 }
 

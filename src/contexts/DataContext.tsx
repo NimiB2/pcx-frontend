@@ -1,3 +1,10 @@
+/**
+ * DataContext — the central in-memory data store for the PCX frontend.
+ *
+ * Acts as a mock backend, seeding data from `mockData/` and exposing CRUD-style
+ * actions that components call instead of hitting a real API. When the backend is
+ * ready, these actions should be replaced with service calls.
+ */
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 import {
     mockBatches,
@@ -99,25 +106,39 @@ interface DataContextType {
     creditSummary: CreditSummary;
     monthlyCredits: MonthlyCredit[];
 
-    // Actions
+    /** Update the status string of a batch (e.g. 'IN_PROGRESS' → 'COMPLETED'). */
     updateBatchStatus: (batchId: string, status: string) => void;
+    /** Prepend a new discrepancy record; auto-generates its ID. */
     addDiscrepancy: (discrepancy: Omit<Discrepancy, 'id'>) => void;
+    /** Mark a discrepancy as RESOLVED and record the resolution text. */
     resolveDiscrepancy: (id: string, resolution: string) => void;
+    /** Mark a discrepancy as ACKNOWLEDGED without resolving it. */
     acknowledgeDiscrepancy: (id: string) => void;
+    /** Prepend a new measurement record; auto-generates its ID. */
     addMeasurement: (measurement: Omit<Measurement, 'id'>) => void;
+    /** Update the status of a punch-list task; also sets completedDate when COMPLETED. */
     updateTaskStatus: (taskId: string, status: PunchListTask['status']) => void;
+    /** Create a new punch-list task with PENDING status and 0% progress. */
     addTask: (task: Omit<PunchListTask, 'id' | 'status' | 'progress' | 'completedDate'>) => void;
+    /** Apply a partial update to an existing punch-list task. */
     updateTaskDetails: (taskId: string, updates: Partial<PunchListTask>) => void;
+    /** Remove a task and un-register it from any other task's dependency list. */
     deleteTask: (taskId: string) => void;
 
-    // Masking
+    /** Whether supplier/farmer identities are hidden behind codebook codes. */
     isMasked: boolean;
+    /** Toggle the masking/unmasking of codebook identities. */
     toggleMasking: () => void;
+    /**
+     * Resolves a codebook code to its real identity when unmasked.
+     * Returns the code itself when masking is active or the code is not found.
+     */
     getIdentity: (code: string | undefined) => string;
 }
 
 export const DataContext = createContext<DataContextType | undefined>(undefined);
 
+/** Hook to access the DataContext. Must be called inside a DataProvider. */
 export const useData = () => {
     const context = useContext(DataContext);
     if (!context) {

@@ -1,3 +1,10 @@
+/**
+ * NotificationContext — app-wide in-app notification system.
+ *
+ * Components dispatch notifications via `useNotifications().addNotification`.
+ * The bell icon in the Layout reads from this context to show unread counts and
+ * the notifications dropdown. The full history is accessible on the NotificationsPage.
+ */
 import React, { createContext, useContext, useState, ReactNode, useCallback } from 'react';
 
 export type NotificationType = 'INFO' | 'WARNING' | 'ERROR' | 'SUCCESS';
@@ -14,11 +21,20 @@ export interface AppNotification {
 
 interface NotificationContextType {
     notifications: AppNotification[];
+    /** Number of notifications the current user has not yet read. */
     unreadCount: number;
+    /**
+     * Create and prepend a new notification.
+     * `id`, `timestamp`, and `read` are set automatically.
+     */
     addNotification: (notification: Omit<AppNotification, 'id' | 'timestamp' | 'read'>) => void;
+    /** Mark a single notification as read by its ID. */
     markAsRead: (id: string) => void;
+    /** Mark every notification as read. */
     markAllAsRead: () => void;
+    /** Remove a single notification by its ID. */
     clearNotification: (id: string) => void;
+    /** Remove all notifications. */
     clearAll: () => void;
 }
 

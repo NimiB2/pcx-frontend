@@ -40,7 +40,18 @@ const getStatusIcon = (status: StationStatus) => {
     }
 };
 
+/**
+ * FactoryFloorMap Component
+ *
+ * Displays a visual grid of processing stations (Intake, Mixing, Extruder, etc.)
+ * with color-coded status indicators (RUNNING, STOPPED, MAINTENANCE, ISSUE).
+ * Hovering over a station tile shows a tooltip with efficiency and the active operator.
+ *
+ * Currently uses static mock data (`mockStations`).
+ * In production, this would be driven by live MES station telemetry.
+ */
 const FactoryFloorMap: React.FC = () => {
+
     return (
         <Paper sx={{ p: 3, height: '100%', bgcolor: '#263238', color: 'white' }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>

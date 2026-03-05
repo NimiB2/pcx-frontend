@@ -1,4 +1,12 @@
+/**
+ * UserManagement — user administration page, restricted to super_admin.
+ *
+ * Lists all system users with their role, MFA status, and last-seen time.
+ * Supports creating, editing, and deleting users via an inline Dialog form.
+ * User data is stored in local state (mock); integrate with a backend API when available.
+ */
 import React, { useState } from 'react';
+
 import {
     Box,
     Paper,

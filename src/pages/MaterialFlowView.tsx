@@ -1,4 +1,13 @@
+/**
+ * MaterialFlowView — visual mass-balance and material flow diagram.
+ *
+ * Accessible by plant_engineer, super_admin, and regulatory (read-only).
+ * Displays a stepped process-flow chart (Raw Inputs → Extrusion → Final Product + Waste)
+ * alongside a Transfer Points Summary table showing variances against tolerance thresholds.
+ * Export to CSV and PDF are available (currently stubbed with an alert).
+ */
 import React, { useState } from 'react';
+
 import {
     Box,
     Typography,
